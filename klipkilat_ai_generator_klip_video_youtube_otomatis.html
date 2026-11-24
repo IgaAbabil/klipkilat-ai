@@ -1,0 +1,4401 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KlipKilat AI — Pemotong Klip Video Otomatis 15, 30, 60 Detik</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #09090b;
+      color: #f4f4f5;
+      overflow-x: hidden;
+    }
+
+    /* Efek Crop Vertikal 9:16 untuk YouTube IFrame */
+    .yt-crop-9-16 {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      overflow: hidden;
+      background: #000000;
+    }
+    .yt-crop-9-16 iframe,
+    .yt-crop-9-16 #yt-player-placeholder {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      height: 100% !important;
+      width: 316.05% !important;
+      max-width: none !important;
+      transform: translate(-50%, -50%);
+      will-change: left, top, transform;
+      pointer-events: none;
+    }
+
+    /* Tampilan Original 16:9 */
+    .yt-crop-16-9 {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      background: #000000;
+    }
+    .yt-crop-16-9 iframe,
+    .yt-crop-16-9 #yt-player-placeholder {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100% !important;
+      height: 100% !important;
+      transform: translate(-50%, -50%);
+      will-change: left, top, transform;
+      pointer-events: none;
+    }
+
+    /* Gaya Video Lokal dalam Rasio 9:16 & 16:9 */
+    .yt-crop-9-16 video.main-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 50% 50%;
+      will-change: object-position, transform;
+      z-index: 5;
+    }
+    .yt-crop-16-9 video.main-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000000;
+      will-change: object-position, transform;
+      z-index: 5;
+    }
+
+    /* Mode 9:16 Full Video + Background Potret Blur (Tanpa Terpotong) */
+    .yt-fit-blur-9-16 {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      overflow: hidden;
+      background: #09090b;
+    }
+    .yt-fit-blur-9-16 video.main-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: 50% 50%;
+      z-index: 5;
+      filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.85));
+      will-change: object-position, transform;
+    }
+    .yt-fit-blur-9-16 #yt-player-wrapper {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100% !important;
+      height: auto !important;
+      aspect-ratio: 16 / 9;
+      transform: translate(-50%, -50%);
+      z-index: 5;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.88);
+      pointer-events: none;
+    }
+    .yt-fit-blur-9-16 iframe,
+    .yt-fit-blur-9-16 #yt-player-placeholder {
+      position: absolute;
+      inset: 0;
+      width: 100% !important;
+      height: 100% !important;
+      transform: none !important;
+      pointer-events: none;
+    }
+
+    /* Rule-of-Thirds Grid saat Menggeser / Mengedit Framing */
+    .framing-grid-overlay {
+      background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.22) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.22) 1px, transparent 1px);
+      background-size: 33.333% 33.333%;
+    }
+
+    /* Gaya Subtitle TikTok */
+    .tiktok-caption-classic {
+      color: #ffffff;
+      text-shadow:
+        -2px -2px 0 #000,
+         2px -2px 0 #000,
+        -2px  2px 0 #000,
+         2px  2px 0 #000,
+         0px  4px 12px rgba(0, 0, 0, 0.9);
+    }
+    .tiktok-caption-yellow {
+      color: #facc15;
+      text-shadow:
+        -2px -2px 0 #000,
+         2px -2px 0 #000,
+        -2px  2px 0 #000,
+         2px  2px 0 #000,
+         0px  4px 12px rgba(0, 0, 0, 0.9);
+    }
+    .tiktok-caption-neon {
+      color: #e9d5ff;
+      text-shadow:
+        0 0 10px rgba(168, 85, 247, 0.95),
+        0 0 20px rgba(139, 92, 246, 0.75),
+        -2px -2px 0 #09090b,
+         2px  2px 0 #09090b;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #121215;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3f3f46;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-purple-500/30 selection:text-purple-200">
+
+  <!-- Input File Video Lokal (Menggunakan opacity-0 & label agar 100% bisa diklik di semua browser/iframe) -->
+  <input
+    type="file"
+    id="local-video-input"
+    accept="video/*,.mp4,.mov,.webm,.mkv,.avi"
+    class="fixed -top-24 -left-24 w-1 h-1 opacity-0 pointer-events-none"
+  />
+
+  <!-- Drag & Drop Overlay -->
+  <div id="drop-zone-overlay" class="hidden fixed inset-0 z-50 bg-zinc-950/90 backdrop-blur-md border-4 border-dashed border-purple-500 flex flex-col items-center justify-center p-6 text-center pointer-events-none">
+    <div class="w-16 h-16 rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center mb-4 text-3xl">
+      🎬
+    </div>
+    <h3 class="text-2xl font-extrabold text-white mb-2">Lepaskan File Video MP4 Anda di Sini</h3>
+    <p class="text-sm text-zinc-400 max-w-md">
+      Otomatis mendeteksi pembicara, memotong segmen viral 15/30/60 detik, dan menempelkan subtitle TikTok tanpa rekam manual.
+    </p>
+  </div>
+
+  <!-- Local File Protocol Notice Banner (Muncul jika dibuka via file:// langsung tanpa server lokal) -->
+  <div id="file-protocol-banner" class="hidden bg-amber-950/85 border-b border-amber-500/40 px-4 py-2 text-center text-xs text-amber-200">
+    💡 <strong>Tips Menjalankan Lokal:</strong> Anda membuka file via <code class="px-1.5 py-0.5 rounded bg-black/40 font-mono">file://</code>. Fitur <strong>Upload MP4 Asli</strong> langsung aktif, namun untuk memutar embed <strong>YouTube</strong> jalankan server lokal (<code class="px-1.5 py-0.5 rounded bg-black/40 font-mono">npx serve</code> atau <code class="px-1.5 py-0.5 rounded bg-black/40 font-mono">python -m http.server</code>).
+  </div>
+
+  <!-- Navbar -->
+  <header class="sticky top-0 z-30 border-b border-zinc-800/80 bg-zinc-950/85 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 via-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-purple-600/30">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-base sm:text-lg tracking-tight text-white">KlipKilat AI</span>
+            <span class="hidden sm:inline-flex px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
+              Auto Reframe 9:16
+            </span>
+          </div>
+          <p class="text-[11px] text-zinc-400 hidden sm:block">Potong Otomatis 15, 30 &amp; 60 Detik</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <label
+          for="local-video-input"
+          id="header-upload-btn"
+          role="button"
+          tabindex="0"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-700/80 transition cursor-pointer select-none"
+          title="Unggah file MP4/MOV asli untuk pemotongan otomatis 100%"
+        >
+          <span>📁</span>
+          <span>Upload MP4 Asli</span>
+        </label>
+
+        <button
+          type="button"
+          id="toggle-api-key-btn"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 transition cursor-pointer"
+          title="Pengaturan Gemini API Key Opsional"
+        >
+          <span>🔑</span>
+          <span class="hidden md:inline">API Key</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Collapsible API Key Bar -->
+    <div id="api-key-panel" class="hidden border-t border-zinc-800/80 bg-zinc-900/90 px-4 py-3">
+      <div class="max-w-3xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+        <div class="flex-1">
+          <label for="gemini-api-key" class="block text-[11px] font-semibold text-zinc-400 mb-1">
+            Gemini API Key (Opsional — Tanpa API Key pun tetap berjalan otomatis dengan Smart AI Engine)
+          </label>
+          <input
+            type="password"
+            id="gemini-api-key"
+            placeholder="AIzaSy..."
+            class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500"
+          />
+        </div>
+        <div class="flex items-center gap-2 sm:self-end">
+          <button
+            type="button"
+            id="save-api-key-btn"
+            class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition cursor-pointer"
+          >
+            Simpan
+          </button>
+          <button
+            type="button"
+            id="clear-api-key-btn"
+            class="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold transition cursor-pointer"
+          >
+            Hapus
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+
+    <!-- Hero & Input Card -->
+    <section class="max-w-4xl mx-auto mb-8">
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/25 text-purple-300 text-xs font-semibold mb-3">
+          <span>✨</span>
+          <span>Paste Link YouTube atau Upload MP4 &rarr; Jadi Klip Viral Vertikal</span>
+        </div>
+        <h1 class="text-2xl sm:text-4xl font-black tracking-tight text-white mb-2.5">
+          Ubah Video Panjang Jadi Klip <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-indigo-400">15, 30 &amp; 60 Detik</span>
+        </h1>
+        <p class="text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto">
+          Otomatis mendeteksi momen terbaik, melacak posisi pembicara secara dinamis (Auto-Reframe 9:16), menambahkan subtitle TikTok, dan unduh 1-klik.
+        </p>
+      </div>
+
+      <!-- Main Input Form -->
+      <div class="bg-zinc-900/90 border border-zinc-800/90 rounded-3xl p-4 sm:p-6 shadow-2xl shadow-black/50">
+        <form id="clip-form" class="space-y-4">
+          <!-- URL Input Row -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="youtube-url" class="text-xs font-bold text-zinc-300">
+                Tempel Link Video YouTube
+              </label>
+              <button
+                type="button"
+                id="sample-link-btn"
+                class="text-xs font-semibold text-purple-400 hover:text-purple-300 transition cursor-pointer"
+              >
+                ⚡ Coba Contoh Link
+              </button>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2.5">
+              <div class="relative flex-1">
+                <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-base">🔗</span>
+                <input
+                  type="text"
+                  id="youtube-url"
+                  placeholder="https://www.youtube.com/watch?v=... atau https://youtu.be/..."
+                  class="w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500 rounded-2xl pl-10 pr-4 py-3.5 text-sm text-white placeholder-zinc-500 outline-none transition"
+                />
+              </div>
+              <button
+                type="submit"
+                id="generate-btn"
+                class="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-sm shadow-lg shadow-purple-600/25 transition flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+              >
+                <span>✨</span>
+                <span>Generate Klip Otomatis</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Duration & Topic Row -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-3 pt-1">
+            <!-- Duration Selector -->
+            <div class="md:col-span-6">
+              <span class="block text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                Target Durasi Klip
+              </span>
+              <div class="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  data-duration="15"
+                  class="duration-btn py-2.5 px-3 rounded-xl text-xs font-extrabold border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white hover:border-zinc-700 transition cursor-pointer"
+                >
+                  ⚡ 15 Detik
+                </button>
+                <button
+                  type="button"
+                  data-duration="30"
+                  class="duration-btn py-2.5 px-3 rounded-xl text-xs font-extrabold border border-purple-500 bg-purple-600/20 text-purple-200 shadow-sm transition cursor-pointer"
+                >
+                  🔥 30 Detik
+                </button>
+                <button
+                  type="button"
+                  data-duration="60"
+                  class="duration-btn py-2.5 px-3 rounded-xl text-xs font-extrabold border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white hover:border-zinc-700 transition cursor-pointer"
+                >
+                  🎬 60 Detik
+                </button>
+              </div>
+            </div>
+
+            <!-- Optional Topic Focus -->
+            <div class="md:col-span-6">
+              <label for="topic-focus" class="block text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                Fokus Topik / Kata Kunci (Opsional)
+              </label>
+              <input
+                type="text"
+                id="topic-focus"
+                placeholder="Contoh: tips bisnis, mindset, rahasia sukses..."
+                class="w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 outline-none transition"
+              />
+            </div>
+          </div>
+
+          <!-- Quick Local MP4 Banner inside Form -->
+          <div class="pt-2 border-t border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-zinc-400">
+            <span>Punya file video asli (MP4/MOV/WebM)? Potong &amp; Auto-Reframe 100% otomatis tanpa rekam layar.</span>
+            <label
+              for="local-video-input"
+              id="hero-upload-btn"
+              role="button"
+              tabindex="0"
+              class="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition cursor-pointer shrink-0 select-none inline-flex items-center gap-1.5"
+            >
+              <span>📁</span>
+              <span>Pilih File Video Lokal</span>
+            </label>
+          </div>
+        </form>
+
+        <!-- Status / Loading Banner -->
+        <div id="status-banner" class="hidden mt-4 p-3.5 rounded-2xl bg-purple-950/40 border border-purple-500/40 flex items-center gap-3">
+          <div class="w-5 h-5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin shrink-0"></div>
+          <div>
+            <p id="status-msg" class="text-xs font-extrabold text-white">Menganalisis video...</p>
+            <p id="status-sub" class="text-[11px] text-purple-300">Menyiapkan segmen klip terbaik</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Empty State / Quick Examples -->
+    <section id="empty-state" class="max-w-4xl mx-auto">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div class="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/80">
+          <div class="text-xl mb-2">🎯</div>
+          <h3 class="text-xs font-extrabold text-white mb-1">AI Auto-Reframe &amp; Editor</h3>
+          <p class="text-[11px] text-zinc-400 leading-relaxed">
+            Kamera otomatis mengikuti pembicara aktif atau atur framing sendiri dengan geser &amp; zoom langsung di layar.
+          </p>
+        </div>
+        <div class="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/80">
+          <div class="text-xl mb-2">💬</div>
+          <h3 class="text-xs font-extrabold text-white mb-1">Subtitle TikTok Otomatis</h3>
+          <p class="text-[11px] text-zinc-400 leading-relaxed">
+            Caption dinamis tersinkronisasi per detik, dapat diedit langsung, dan tertanam permanen saat diunduh.
+          </p>
+        </div>
+        <div class="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/80">
+          <div class="text-xl mb-2">⬇️</div>
+          <h3 class="text-xs font-extrabold text-white mb-1">Unduh 1-Klik + Suara</h3>
+          <p class="text-[11px] text-zinc-400 leading-relaxed">
+            Ekspor instan ke format vertikal 9:16 atau 16:9 lengkap dengan suara asli maupun ekspor file .SRT.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Workspace Section (Hidden until video loaded) -->
+    <section id="workspace-section" class="hidden space-y-6">
+      <!-- Video Info Bar -->
+      <div class="bg-zinc-900/85 border border-zinc-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span id="video-source-badge" class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-red-500/15 text-red-300 border border-red-500/30 shrink-0">
+            YouTube
+          </span>
+          <h2 id="video-title-display" class="text-sm sm:text-base font-extrabold text-white truncate">
+            Judul Video
+          </h2>
+        </div>
+        <span id="video-duration-badge" class="px-3 py-1 rounded-xl bg-zinc-950 border border-zinc-800 text-xs font-mono font-bold text-zinc-300 shrink-0">
+          Durasi: 00:00
+        </span>
+      </div>
+
+      <!-- Two-Column Studio Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Left Column: Video Preview & Framing Editor -->
+        <div class="lg:col-span-5 bg-zinc-900/90 border border-zinc-800 rounded-3xl p-4 sm:p-5 shadow-2xl">
+          <!-- Top Aspect Ratio & Subtitle Controls -->
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="inline-flex p-1 rounded-xl bg-zinc-950 border border-zinc-800">
+              <button
+                type="button"
+                id="ratio-9-16-btn"
+                class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-purple-600 text-white shadow transition cursor-pointer"
+                title="Potong vertikal penuh mengikuti pembicara"
+              >
+                📱 9:16 Crop
+              </button>
+              <button
+                type="button"
+                id="ratio-fit-blur-btn"
+                class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-zinc-400 hover:text-white transition cursor-pointer"
+                title="Video full utuh tanpa terpotong dengan latar belakang potret blur"
+              >
+                🖼️ 9:16 Full+BG
+              </button>
+              <button
+                type="button"
+                id="ratio-16-9-btn"
+                class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-zinc-400 hover:text-white transition cursor-pointer"
+                title="Rasio asli layar lebar 16:9"
+              >
+                🖥️ 16:9
+              </button>
+            </div>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                id="toggle-captions-btn"
+                class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-purple-500/15 text-purple-200 border border-purple-500/35 transition cursor-pointer"
+                title="Tampilkan / Sembunyikan Subtitle"
+              >
+                💬 Subtitle: ON
+              </button>
+
+              <button
+                type="button"
+                id="transcribe-voice-btn"
+                class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/35 hover:bg-emerald-500/25 transition cursor-pointer"
+                title="Buat subtitle otomatis mengikuti suara pembicara"
+              >
+                🎙️ Sync Suara
+              </button>
+
+              <select
+                id="caption-style-select"
+                class="bg-zinc-950 border border-zinc-800 text-zinc-200 text-xs font-semibold rounded-xl px-2 py-1.5 outline-none focus:border-purple-500 cursor-pointer"
+                title="Gaya Warna Subtitle"
+              >
+                <option value="classic">Putih Klasik</option>
+                <option value="yellow">Kuning Viral</option>
+                <option value="neon">Ungu Neon</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Bilah Gaya Background Potret (Muncul saat mode 9:16 Full+BG aktif) -->
+          <div id="portrait-bg-bar" class="hidden flex flex-wrap items-center justify-between gap-2 mb-3 px-3 py-2 rounded-2xl bg-purple-950/30 border border-purple-500/35">
+            <span class="text-xs font-bold text-purple-200 flex items-center gap-1.5">
+              <span>🖼️</span>
+              <span>Mode Full Frame + Latar Potret</span>
+            </span>
+            <select
+              id="portrait-bg-select"
+              class="bg-zinc-900 border border-purple-500/40 text-zinc-100 text-xs font-semibold rounded-xl px-2.5 py-1 outline-none focus:border-purple-400 cursor-pointer"
+              title="Pilih gaya latar belakang pengisi ruang potret"
+            >
+              <option value="blur-video">🌫️ Blur Video Asli</option>
+              <option value="blur-dark">🌌 Blur Gelap Sinematik</option>
+              <option value="gradient-purple">💜 Gradient Ungu Studio</option>
+            </select>
+          </div>
+
+          <!-- Kontrol AI Auto-Reframe & Tombol Editor Framing -->
+          <div id="reframe-control-bar" class="flex flex-wrap items-center justify-between gap-2 mb-3 px-3 py-2 rounded-2xl bg-zinc-950/90 border border-zinc-800/90">
+            <button
+              type="button"
+              id="toggle-reframe-btn"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/35 hover:bg-emerald-500/25 transition cursor-pointer"
+              title="Aktifkan/Matikan Kamera Otomatis Mengikuti Pembicara"
+            >
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="toggle-reframe-label">Auto-Reframe: ON</span>
+            </button>
+
+            <div class="flex items-center gap-1.5">
+              <select
+                id="reframe-mode-select"
+                class="bg-zinc-900 border border-zinc-700 text-zinc-200 text-xs font-semibold rounded-xl px-2 py-1 outline-none focus:border-purple-500 cursor-pointer"
+                title="Pilih Pola Pelacakan atau Manual"
+              >
+                <option value="auto">🎯 Auto AI</option>
+                <option value="podcast">🎙️ Podcast 2 Orang</option>
+                <option value="cinematic">🎥 Pan Sinematik</option>
+                <option value="manual">✋ Manual (Custom)</option>
+                <option value="center">⏹️ Tengah Statis</option>
+              </select>
+
+              <button
+                type="button"
+                id="toggle-framing-editor-btn"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-600/25 text-purple-200 border border-purple-500/40 hover:bg-purple-600/35 transition cursor-pointer"
+                title="Buka / Tutup Editor Framing Manual"
+              >
+                <span>🎛️</span>
+                <span>Editor</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Panel Editor Framing & Kamera Manual -->
+          <div id="framing-editor-panel" class="mb-4 p-3 rounded-2xl bg-zinc-950/95 border border-purple-500/30 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] font-extrabold uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
+                <span>🎛️ Editor Framing Klip</span>
+                <span id="framing-mode-pill" class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 text-[10px] font-bold">Auto AI</span>
+              </span>
+              <button
+                type="button"
+                id="reset-framing-btn"
+                class="text-[11px] font-bold text-zinc-400 hover:text-white transition cursor-pointer"
+              >
+                ↺ Reset
+              </button>
+            </div>
+
+            <!-- Preset Posisi Cepat 1-Klik -->
+            <div class="grid grid-cols-5 gap-1.5">
+              <button
+                type="button"
+                data-frame-preset="left"
+                class="frame-preset-btn py-1.5 px-1 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-bold text-zinc-200 transition cursor-pointer"
+                title="Fokus Pembicara Kiri"
+              >
+                ⬅️ Kiri
+              </button>
+              <button
+                type="button"
+                data-frame-preset="center"
+                class="frame-preset-btn py-1.5 px-1 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-bold text-zinc-200 transition cursor-pointer"
+                title="Fokus Tengah"
+              >
+                ⏺️ Tengah
+              </button>
+              <button
+                type="button"
+                data-frame-preset="right"
+                class="frame-preset-btn py-1.5 px-1 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-bold text-zinc-200 transition cursor-pointer"
+                title="Fokus Pembicara Kanan"
+              >
+                ➡️ Kanan
+              </button>
+              <button
+                type="button"
+                data-frame-preset="closeup"
+                class="frame-preset-btn py-1.5 px-1 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-bold text-zinc-200 transition cursor-pointer"
+                title="Zoom Close-Up Wajah"
+              >
+                🔍 Zoom+
+              </button>
+              <button
+                type="button"
+                data-frame-preset="auto"
+                class="frame-preset-btn py-1.5 px-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-[11px] font-bold text-emerald-300 transition cursor-pointer"
+                title="Kembalikan Pelacakan Otomatis AI"
+              >
+                🤖 Auto
+              </button>
+            </div>
+
+            <!-- Sliders Geser Horizontal, Vertikal & Zoom -->
+            <div class="space-y-2 pt-0.5">
+              <div>
+                <div class="flex justify-between text-[11px] font-semibold text-zinc-400 mb-0.5">
+                  <span>Geser Horizontal (Kiri ↔ Kanan)</span>
+                  <span id="framing-pan-x-val" class="font-mono text-zinc-200">50%</span>
+                </div>
+                <input
+                  type="range"
+                  id="framing-pan-x"
+                  min="0"
+                  max="100"
+                  value="50"
+                  class="w-full h-1.5 bg-zinc-800 rounded-lg accent-purple-500 cursor-pointer"
+                />
+              </div>
+
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <div class="flex justify-between text-[11px] font-semibold text-zinc-400 mb-0.5">
+                    <span>Vertikal (Atas ↕ Bawah)</span>
+                    <span id="framing-pan-y-val" class="font-mono text-zinc-200">50%</span>
+                  </div>
+                  <input
+                    type="range"
+                    id="framing-pan-y"
+                    min="0"
+                    max="100"
+                    value="50"
+                    class="w-full h-1.5 bg-zinc-800 rounded-lg accent-purple-500 cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div class="flex justify-between text-[11px] font-semibold text-zinc-400 mb-0.5">
+                    <span>Zoom Kamera</span>
+                    <span id="framing-zoom-val" class="font-mono text-zinc-200">1.05x</span>
+                  </div>
+                  <input
+                    type="range"
+                    id="framing-zoom"
+                    min="100"
+                    max="220"
+                    value="105"
+                    class="w-full h-1.5 bg-zinc-800 rounded-lg accent-purple-500 cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Edit Teks Subtitle Aktif & Transkrip Suara -->
+            <div class="pt-2 border-t border-zinc-800/80 space-y-2">
+              <div class="flex flex-wrap items-center justify-between gap-1.5">
+                <span id="subtitle-source-pill" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400">
+                  💬 Subtitle: Smart AI
+                </span>
+                <div class="flex items-center gap-1.5">
+                  <select
+                    id="stt-lang-select"
+                    class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-[10px] font-bold rounded-lg px-2 py-1 outline-none cursor-pointer"
+                    title="Bahasa Suara Pembicara"
+                  >
+                    <option value="id-ID">🇮🇩 Indonesia</option>
+                    <option value="en-US">🇺🇸 English</option>
+                  </select>
+                  <button
+                    type="button"
+                    id="editor-transcribe-clip-btn"
+                    class="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 text-[10px] font-extrabold transition cursor-pointer"
+                    title="Transkrip ulang suara pembicara pada klip ini"
+                  >
+                    🎙️ Transkrip Suara Klip
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <input
+                  type="text"
+                  id="quick-caption-input"
+                  placeholder="Edit teks subtitle baris aktif..."
+                  class="flex-1 bg-zinc-900 border border-zinc-800 focus:border-purple-500 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 outline-none"
+                />
+                <button
+                  type="button"
+                  id="apply-framing-all-btn"
+                  class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px] font-bold transition cursor-pointer shrink-0"
+                  title="Salin posisi framing klip ini ke semua klip lain"
+                >
+                  📋 Terapkan ke Semua
+                </button>
+              </div>
+
+              <!-- Daftar Baris Subtitle Bertimestamp (Sesuai Suara) -->
+              <div id="clip-captions-editor-list" class="max-h-32 overflow-y-auto space-y-1 pr-1"></div>
+            </div>
+          </div>
+
+          <!-- Player Frame Wrapper -->
+          <div class="bg-zinc-950/80 rounded-2xl p-2 sm:p-3 border border-zinc-800/80 mb-4">
+            <div
+              id="aspect-container"
+              style="touch-action: none;"
+              class="yt-crop-9-16 max-w-[290px] sm:max-w-[310px] mx-auto rounded-xl shadow-2xl border border-zinc-800 cursor-grab active:cursor-grabbing select-none"
+              title="Seret layar untuk geser framing • Scroll untuk zoom • Klik untuk Putar/Jeda"
+            >
+              <!-- Layer Background Potret Blur (Untuk mode 9:16 Full+BG) -->
+              <div id="portrait-blur-bg-layer" class="hidden absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                <video
+                  id="local-bg-blur-player"
+                  class="hidden absolute -inset-6 w-[calc(100%+48px)] h-[calc(100%+48px)] object-cover scale-110 blur-xl brightness-75 saturate-125"
+                  muted
+                  playsinline
+                ></video>
+                <img
+                  id="yt-bg-blur-img"
+                  alt=""
+                  class="hidden absolute -inset-6 w-[calc(100%+48px)] h-[calc(100%+48px)] object-cover scale-125 blur-2xl brightness-50 saturate-150"
+                />
+                <div id="portrait-bg-tint" class="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/55"></div>
+              </div>
+
+              <!-- YouTube Player Container -->
+              <div id="yt-player-wrapper" class="w-full h-full">
+                <div id="yt-player-placeholder"></div>
+              </div>
+
+              <!-- Local MP4 Video Player -->
+              <video id="local-video-player" class="main-video hidden" playsinline></video>
+
+              <!-- Rule-of-Thirds Framing Guide Overlay -->
+              <div id="framing-guide-grid" class="hidden absolute inset-0 z-10 framing-grid-overlay pointer-events-none">
+                <div class="absolute inset-x-0 top-1/2 h-px bg-purple-400/50"></div>
+                <div class="absolute inset-y-0 left-1/2 w-px bg-purple-400/50"></div>
+              </div>
+
+              <!-- Active Clip Top Badge Overlay -->
+              <div id="overlay-top-badge" class="hidden absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
+                <span id="overlay-clip-label" class="px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-md text-[11px] font-bold text-white border border-white/15">
+                  Klip #1
+                </span>
+                <span id="overlay-score-label" class="px-2 py-1 rounded-lg bg-purple-600/90 backdrop-blur-md text-[11px] font-extrabold text-white">
+                  🔥 95
+                </span>
+              </div>
+
+              <!-- Live Speaker Tracking / Framing Radar HUD -->
+              <div id="reframe-hud-badge" class="hidden absolute top-11 left-3 right-3 z-20 flex items-center justify-between gap-2 px-2.5 py-1 rounded-lg bg-black/65 backdrop-blur-md border border-emerald-500/30 pointer-events-none">
+                <span id="reframe-hud-label" class="text-[10px] font-bold text-emerald-300 truncate">
+                  🎯 Auto-Reframe: Pembicara Tengah
+                </span>
+                <div class="w-16 h-1.5 bg-zinc-800 rounded-full relative overflow-hidden shrink-0">
+                  <span id="reframe-hud-dot" class="absolute top-0 bottom-0 w-3 -ml-1.5 rounded-full bg-emerald-400 shadow shadow-emerald-400 transition-all duration-150" style="left: 50%;"></span>
+                </div>
+              </div>
+
+              <!-- Dynamic TikTok-style Caption Overlay -->
+              <div id="caption-overlay" class="absolute bottom-7 left-3 right-3 z-20 text-center pointer-events-none px-2">
+                <span
+                  id="caption-text"
+                  class="inline-block font-black uppercase text-base sm:text-lg leading-tight tracking-wide tiktok-caption-classic"
+                >
+                  PILIH KLIP UNTUK MEMULAI
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Segment Timeline & Controls -->
+          <div class="space-y-3">
+            <div>
+              <div class="flex items-center justify-between text-[11px] font-semibold text-zinc-400 mb-1">
+                <div>
+                  <span id="segment-current-time" class="text-white font-bold">00:00</span>
+                  <span> / </span>
+                  <span id="segment-total-time">00:30</span>
+                </div>
+                <span id="segment-abs-range" class="text-zinc-500">Asli: 00:00 - 00:30</span>
+              </div>
+              <div id="segment-progress-track" class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden cursor-pointer">
+                <div id="segment-progress-bar" class="h-full bg-gradient-to-r from-purple-500 to-indigo-500 w-0 transition-all duration-100"></div>
+              </div>
+            </div>
+
+            <!-- Transport & Volume Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  id="play-pause-btn"
+                  class="px-3.5 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 font-extrabold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <span id="play-pause-icon">▶</span>
+                  <span id="play-pause-text">Putar</span>
+                </button>
+
+                <button
+                  type="button"
+                  id="replay-clip-btn"
+                  class="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold transition cursor-pointer"
+                  title="Ulangi dari awal klip"
+                >
+                  🔄
+                </button>
+
+                <button
+                  type="button"
+                  id="mute-toggle-btn"
+                  class="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold transition cursor-pointer"
+                  title="Bisukan / Bunyikan Suara"
+                >
+                  🔊
+                </button>
+
+                <input
+                  type="range"
+                  id="volume-slider"
+                  min="0"
+                  max="100"
+                  value="100"
+                  class="w-16 sm:w-20 accent-purple-500 cursor-pointer"
+                  title="Volume Suara"
+                />
+              </div>
+
+              <select
+                id="end-behavior-select"
+                class="bg-zinc-950 border border-zinc-800 text-zinc-300 text-[11px] font-semibold rounded-xl px-2.5 py-2 outline-none focus:border-purple-500 cursor-pointer"
+              >
+                <option value="loop">🔁 Ulangi Otomatis</option>
+                <option value="pause">⏹ Berhenti di Akhir</option>
+              </select>
+            </div>
+
+            <!-- Primary 1-Click Download & Export Buttons -->
+            <div class="pt-2 border-t border-zinc-800/80 space-y-2">
+              <button
+                type="button"
+                id="primary-download-clip-btn"
+                class="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-zinc-950 font-black text-xs sm:text-sm shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                <span>⬇️</span>
+                <span>Unduh Video Klip (1-Klik)</span>
+              </button>
+
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  id="download-srt-btn"
+                  class="py-2 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold transition cursor-pointer"
+                >
+                  📄 Unduh Subtitle (.SRT)
+                </button>
+                <button
+                  type="button"
+                  id="copy-ffmpeg-btn"
+                  class="py-2 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold transition cursor-pointer"
+                >
+                  📋 Salin Perintah FFmpeg
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Generated Clips List -->
+        <div class="lg:col-span-7 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 bg-zinc-900/70 border border-zinc-800 rounded-2xl px-4 py-3">
+            <div>
+              <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+                <span>🎬 Rekomendasi Klip Viral</span>
+                <span id="clips-count-badge" class="px-2 py-0.5 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300">
+                  0 Klip
+                </span>
+              </h2>
+              <p class="text-xs text-zinc-400">Klik kartu klip untuk pratinjau langsung atau unduh 1-klik</p>
+            </div>
+
+            <button
+              type="button"
+              id="batch-download-btn"
+              class="hidden px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-extrabold shadow transition cursor-pointer"
+            >
+              ⚡ Unduh Semua Klip Otomatis
+            </button>
+          </div>
+
+          <div id="clips-list" class="space-y-3.5"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Floating Live Capture HUD (for YouTube Tab Recording without obstructing video) -->
+  <div id="live-capture-hud" class="hidden fixed bottom-4 left-4 z-50 bg-zinc-950/95 border border-purple-500/50 rounded-2xl p-3 shadow-2xl backdrop-blur-xl max-w-xs w-full">
+    <div class="flex items-center justify-between gap-2 mb-2">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+        <span class="text-xs font-extrabold text-white">Merekam Video Asli...</span>
+      </div>
+      <span id="live-hud-timer" class="text-xs font-mono font-bold text-purple-300">00:00 / 00:30</span>
+    </div>
+    <p class="text-[11px] text-zinc-400 mb-2.5">
+      Kamera otomatis mengikuti pembicara &amp; merekam suara tab. Jangan tutup tab ini.
+    </p>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        id="live-hud-finish-btn"
+        class="flex-1 py-1.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-extrabold text-xs transition cursor-pointer"
+      >
+        ✔ Simpan Sekarang
+      </button>
+      <button
+        type="button"
+        id="live-hud-cancel-btn"
+        class="py-1.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs transition cursor-pointer"
+      >
+        Batal
+      </button>
+    </div>
+  </div>
+
+  <!-- 1-Click Export & Render Modal -->
+  <div id="export-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 mb-1">
+            Studio Ekspor HD + Auto-Reframe
+          </span>
+          <h3 id="export-modal-title" class="text-base sm:text-lg font-extrabold text-white">
+            Unduh Klip #1
+          </h3>
+          <p id="export-modal-sub" class="text-xs text-zinc-400">
+            Resolusi 1080×1920 (9:16) • Subtitle TikTok Tertanam
+          </p>
+        </div>
+        <button
+          type="button"
+          id="close-export-modal-btn"
+          class="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-sm font-bold cursor-pointer"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Progress Box -->
+      <div id="export-progress-box" class="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 space-y-2.5">
+        <div class="flex items-center justify-between text-xs">
+          <span id="export-status-text" class="font-bold text-purple-300">Siap merender klip...</span>
+          <span id="export-percent-text" class="font-mono font-extrabold text-white">0%</span>
+        </div>
+        <div class="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+          <div id="export-progress-bar" class="h-full bg-gradient-to-r from-emerald-500 via-purple-500 to-indigo-500 w-0 transition-all duration-150"></div>
+        </div>
+        <p id="export-detail-text" class="text-[11px] text-zinc-400">
+          Pilih mode unduhan di bawah atau tunggu proses otomatis selesai.
+        </p>
+      </div>
+
+      <!-- Rendered Video Verification Preview (Muncul setelah selesai render) -->
+      <div id="export-preview-box" class="hidden bg-zinc-950 border border-emerald-500/40 rounded-2xl p-3.5 space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-extrabold text-emerald-300 flex items-center gap-1.5">
+            <span>✅</span>
+            <span>Hasil Video Siap Diputar</span>
+          </span>
+          <span id="export-file-meta" class="px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-[10px] font-mono font-bold text-zinc-300">
+            MP4 • 0 MB
+          </span>
+        </div>
+        <video
+          id="export-result-video"
+          controls
+          playsinline
+          class="w-full max-h-56 rounded-xl bg-black border border-zinc-800 mx-auto"
+        ></video>
+        <button
+          type="button"
+          id="export-redownload-btn"
+          class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black text-xs transition cursor-pointer"
+        >
+          💾 Simpan / Unduh Ulang File Video
+        </button>
+      </div>
+
+      <!-- Local File Mode Notice -->
+      <div id="export-local-options" class="hidden space-y-3">
+        <div class="p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 text-xs text-emerald-200">
+          ✅ <strong>Mode File Video Asli Aktif:</strong> Memotong langsung bagian video asli, mempertahankan suara asli pembicara, mengikuti gerak pembicara (Auto-Reframe), dan menempelkan subtitle secara otomatis.
+        </div>
+        <button
+          type="button"
+          id="restart-local-render-btn"
+          class="w-full py-3 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black text-xs sm:text-sm transition cursor-pointer"
+        >
+          ⬇️ Mulai Potong &amp; Unduh Otomatis
+        </button>
+      </div>
+
+      <!-- YouTube Export Options -->
+      <div id="export-youtube-options" class="space-y-3">
+        <!-- Option 1: Live Video Tab Capture -->
+        <div class="p-3.5 rounded-2xl bg-zinc-950 border border-purple-500/40 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-white">🎥 Opsi 1: Video Asli Bergerak + Suara Asli</span>
+            <span class="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 text-[10px] font-bold">Direkomendasikan</span>
+          </div>
+          <p class="text-[11px] text-zinc-400 leading-relaxed">
+            Merekam langsung pemutar video YouTube dengan Auto-Reframe mengikuti pembicara + subtitle. Pilih <strong>Tab Ini</strong> &amp; centang <strong>Bagikan audio tab</strong> saat diminta browser.
+          </p>
+          <button
+            type="button"
+            id="start-live-tab-capture-btn"
+            class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs transition cursor-pointer"
+          >
+            🎬 Rekam &amp; Unduh Video Asli (Bergerak + Suara)
+          </button>
+        </div>
+
+        <!-- Option 2: Instant Canvas Render + Studio Audio -->
+        <div class="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-white">⚡ Opsi 2: Render Cepat Instan HD + Musik Studio</span>
+            <span class="text-[10px] font-semibold text-zinc-400">Tanpa Izin Tab</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] font-bold text-zinc-400 mb-1">Kecepatan Render</label>
+              <select id="export-speed-select" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white">
+                <option value="3">⚡ Cepat 3x</option>
+                <option value="1">🎬 Real-Time 1x</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-zinc-400 mb-1">Audio Latar Studio</label>
+              <select id="export-audio-select" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white">
+                <option value="chill">🎵 Beat Chill Studio</option>
+                <option value="energetic">🔥 Beat Viral Enerjik</option>
+              </select>
+            </div>
+          </div>
+          <button
+            type="button"
+            id="start-instant-render-btn"
+            class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-extrabold text-xs transition cursor-pointer"
+          >
+            ⬇️ Render &amp; Unduh Video Instan
+          </button>
+        </div>
+
+        <!-- Option 3: Upload MP4 or Download Terminal Script -->
+        <div class="grid grid-cols-2 gap-2">
+          <label
+            for="local-video-input"
+            id="modal-upload-mp4-btn"
+            role="button"
+            tabindex="0"
+            class="py-2.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold transition cursor-pointer text-center select-none"
+          >
+            📁 Upload MP4 Asli
+          </label>
+          <button
+            type="button"
+            id="download-script-btn"
+            class="py-2.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold transition cursor-pointer"
+          >
+            💻 Skrip yt-dlp (.BAT/.SH)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <script>
+    // =========================================================================
+    // 1. KONFIGURASI, SAMPLE VIDEOS & STATE GLOBAL
+    // =========================================================================
+    const SAMPLE_VIDEOS = [
+      {
+        id: 'aircAruvnKk',
+        title: 'But what is a neural network? | Deep Learning Chapter 1',
+        duration: 1153
+      },
+      {
+        id: 'rfscVS0vtbw',
+        title: 'Learn Python - Full Course for Beginners [Tutorial]',
+        duration: 1440
+      },
+      {
+        id: 'UF8uR6Z6KLc',
+        title: "Steve Jobs' 2005 Stanford Commencement Address",
+        duration: 904
+      }
+    ];
+
+    const state = {
+      sourceType: 'youtube', // 'youtube' | 'local'
+      videoId: null,
+      videoUrl: '',
+      videoTitle: '',
+      videoDuration: 240,
+      targetDuration: 30,
+      topicFocus: '',
+      aspectRatio: '9:16', // '9:16' | 'fit-blur' | '16:9'
+      portraitBgStyle: 'blur-video', // 'blur-video' | 'blur-dark' | 'gradient-purple'
+      showCaptions: true,
+      captionTheme: 'classic',
+      reframeEnabled: true,
+      reframeMode: 'auto',
+      loopClip: true,
+      isMuted: false,
+      volume: 100,
+      clips: [],
+      activeClipIndex: -1,
+      ytApiReady: false,
+      player: null,
+      segmentMonitorId: null,
+      localVideoFile: null,
+      localVideoUrl: null,
+      fullVoiceTranscript: [],
+      subtitleMode: 'ai', // 'ai' | 'voice' | 'live-stt'
+      isListeningStt: false
+    };
+
+    let currentExportClipIndex = 0;
+
+    // =========================================================================
+    // 2. UTILITAS FORMAT WAKTU, NOTIFIKASI & PARSER URL YOUTUBE
+    // =========================================================================
+    function formatTime(seconds) {
+      const s = Math.max(0, Math.floor(Number(seconds) || 0));
+      const mins = Math.floor(s / 60);
+      const secs = s % 60;
+      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function formatSrtTime(seconds) {
+      const totalMs = Math.max(0, Math.round((Number(seconds) || 0) * 1000));
+      const hrs = Math.floor(totalMs / 3600000);
+      const mins = Math.floor((totalMs % 3600000) / 60000);
+      const secs = Math.floor((totalMs % 60000) / 1000);
+      const ms = totalMs % 1000;
+      return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const colors = {
+        success: 'bg-emerald-950/95 border-emerald-500/50 text-emerald-100',
+        error: 'bg-red-950/95 border-red-500/50 text-red-100',
+        info: 'bg-zinc-900/95 border-purple-500/40 text-zinc-100'
+      };
+      const icons = {
+        success: '✅',
+        error: '⚠️',
+        info: '✨'
+      };
+
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-xl text-xs font-bold transition-all duration-300 transform translate-y-2 opacity-0 ${colors[type] || colors.info}`;
+      toast.innerHTML = `<span class="text-sm shrink-0">${icons[type] || icons.info}</span><span class="leading-snug">${message}</span>`;
+
+      container.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3600);
+    }
+
+    function extractYouTubeVideoId(input) {
+      if (!input) return null;
+      const trimmed = input.trim();
+      if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+
+      try {
+        const normalized = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+        const url = new URL(normalized);
+        const host = url.hostname.replace(/^www\./i, '').toLowerCase();
+
+        if (host === 'youtu.be') {
+          const id = url.pathname.split('/').filter(Boolean)[0];
+          return id && id.length >= 11 ? id.slice(0, 11) : null;
+        }
+        if (host.includes('youtube.com')) {
+          if (url.searchParams.get('v')) {
+            return url.searchParams.get('v').slice(0, 11);
+          }
+          const parts = url.pathname.split('/').filter(Boolean);
+          if (['shorts', 'embed', 'live', 'v'].includes(parts[0]) && parts[1]) {
+            return parts[1].slice(0, 11);
+          }
+        }
+      } catch (err) {
+        const match = trimmed.match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([a-zA-Z0-9_-]{11})/);
+        if (match) return match[1];
+      }
+      return null;
+    }
+
+    async function fetchYouTubeMetadata(videoId) {
+      const sample = SAMPLE_VIDEOS.find((v) => v.id === videoId);
+      try {
+        const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.title) {
+            return {
+              title: data.title,
+              duration: sample ? sample.duration : 420
+            };
+          }
+        }
+      } catch (e) {
+        // Fallback diam-diam jika offline / CORS
+      }
+      return {
+        title: sample ? sample.title : `Video YouTube (${videoId})`,
+        duration: sample ? sample.duration : 360
+      };
+    }
+
+    async function fetchGeminiWithBackoff(payload, maxRetries = 3) {
+      const apiKey = (localStorage.getItem('klipkilat_gemini_key') || '').trim();
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (res.ok) {
+            return await res.json();
+          }
+
+          if ((res.status === 429 || res.status === 503) && attempt < maxRetries) {
+            const delayMs = Math.pow(2, attempt) * 1000;
+            await new Promise((r) => setTimeout(r, delayMs));
+            continue;
+          }
+          return null;
+        } catch (err) {
+          if (attempt < maxRetries) {
+            const delayMs = Math.pow(2, attempt) * 1000;
+            await new Promise((r) => setTimeout(r, delayMs));
+            continue;
+          }
+          return null;
+        }
+      }
+      return null;
+    }
+
+    // =========================================================================
+    // 2B. MESIN TRANSKRIP SUARA OTOMATIS (AUDIO AI & LIVE SPEECH-TO-TEXT)
+    // =========================================================================
+    const VoiceTranscriber = {
+      recognition: null,
+
+      arrayBufferToBase64(buffer) {
+        const bytes = new Uint8Array(buffer);
+        const chunkSize = 8192;
+        let binary = '';
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const slice = bytes.subarray(i, i + chunkSize);
+          binary += String.fromCharCode.apply(null, slice);
+        }
+        return btoa(binary);
+      },
+
+      encodeMonoWav(samplesFloat32, sampleRate) {
+        const numSamples = samplesFloat32.length;
+        const dataSize = numSamples * 2;
+        const buffer = new ArrayBuffer(44 + dataSize);
+        const view = new DataView(buffer);
+
+        const writeStr = (offset, str) => {
+          for (let i = 0; i < str.length; i++) {
+            view.setUint8(offset + i, str.charCodeAt(i));
+          }
+        };
+
+        writeStr(0, 'RIFF');
+        view.setUint32(4, 36 + dataSize, true);
+        writeStr(8, 'WAVE');
+        writeStr(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true); // PCM
+        view.setUint16(22, 1, true); // Mono
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        writeStr(36, 'data');
+        view.setUint32(40, dataSize, true);
+
+        let offset = 44;
+        for (let i = 0; i < numSamples; i++, offset += 2) {
+          const s = Math.max(-1, Math.min(1, samplesFloat32[i]));
+          view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+        }
+        return buffer;
+      },
+
+      async extractWavBase64FromFile(file, startSec = 0, maxDurationSec = 180) {
+        if (!file) return null;
+        try {
+          const maxBytes = 45 * 1024 * 1024;
+          const slicedBlob = file.size > maxBytes ? file.slice(0, maxBytes) : file;
+          const arrayBuf = await slicedBlob.arrayBuffer();
+
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          const audioCtx = new AudioContextClass();
+          const decoded = await audioCtx.decodeAudioData(arrayBuf);
+          await audioCtx.close();
+
+          const origRate = decoded.sampleRate;
+          const totalDur = decoded.duration;
+          const safeStart = Math.min(Math.max(0, startSec), Math.max(0, totalDur - 1));
+          const clipDur = Math.min(maxDurationSec, Math.max(1, totalDur - safeStart));
+
+          const startFrame = Math.floor(safeStart * origRate);
+          const endFrame = Math.min(decoded.length, Math.floor((safeStart + clipDur) * origRate));
+          const frameLen = Math.max(1, endFrame - startFrame);
+
+          const mono = new Float32Array(frameLen);
+          const numCh = decoded.numberOfChannels;
+          for (let ch = 0; ch < numCh; ch++) {
+            const chData = decoded.getChannelData(ch);
+            for (let i = 0; i < frameLen; i++) {
+              mono[i] += chData[startFrame + i] / numCh;
+            }
+          }
+
+          const targetRate = 8000;
+          const ratio = origRate / targetRate;
+          const outLen = Math.max(1, Math.floor(frameLen / ratio));
+          const resampled = new Float32Array(outLen);
+          for (let i = 0; i < outLen; i++) {
+            const idx = Math.min(frameLen - 1, Math.floor(i * ratio));
+            resampled[i] = mono[idx];
+          }
+
+          const wavBuf = this.encodeMonoWav(resampled, targetRate);
+          return {
+            base64: this.arrayBufferToBase64(wavBuf),
+            actualStart: safeStart,
+            actualDuration: clipDur
+          };
+        } catch (err) {
+          return null;
+        }
+      },
+
+      async transcribeAudioSegment(file, startSec = 0, durationSec = 180) {
+        const extracted = await this.extractWavBase64FromFile(file, startSec, durationSec);
+        if (!extracted || !extracted.base64) return [];
+
+        const langVal = document.getElementById('stt-lang-select')?.value || 'id-ID';
+        const langName = langVal === 'en-US' ? 'Inggris' : 'Indonesia';
+
+        const prompt = `Dengarkan audio ini dengan saksama dan transkripsikan SEMUA ucapan pembicara secara verbatim (kata demi kata sesuai suara asli, dominan bahasa ${langName}).
+Pecah transkrip menjadi potongan subtitle pendek gaya TikTok/Shorts (maksimal 3 sampai 6 kata per baris) dengan timestamp start dan end dalam detik relatif terhadap awal audio ini (mulai dari 0.0 hingga ${extracted.actualDuration.toFixed(1)}).
+Jangan mengarang kalimat yang tidak diucapkan. Jika ada jeda musik/diam, lewati ke detik berikutnya saat pembicara bicara lagi.`;
+
+        const payload = {
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: prompt },
+                {
+                  inlineData: {
+                    mimeType: 'audio/wav',
+                    data: extracted.base64
+                  }
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  start: { type: 'NUMBER' },
+                  end: { type: 'NUMBER' },
+                  text: { type: 'STRING' }
+                }
+              }
+            }
+          }
+        };
+
+        const data = await fetchGeminiWithBackoff(payload, 2);
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!rawText) return [];
+
+        try {
+          const parsed = JSON.parse(rawText);
+          if (!Array.isArray(parsed)) return [];
+          return parsed
+            .filter((item) => item && String(item.text || '').trim().length > 0)
+            .map((item) => {
+              const s = Math.max(0, Number(item.start) || 0) + extracted.actualStart;
+              const e = Math.max(s + 0.4, Number(item.end) || s + 1.5) + extracted.actualStart;
+              return {
+                start: Number(s.toFixed(2)),
+                end: Number(e.toFixed(2)),
+                text: String(item.text).trim().toUpperCase()
+              };
+            });
+        } catch (e) {
+          return [];
+        }
+      },
+
+      mapTranscriptToClip(clip, transcriptSegments) {
+        if (!clip || !Array.isArray(transcriptSegments) || transcriptSegments.length === 0) {
+          return false;
+        }
+        const matched = transcriptSegments
+          .filter((seg) => seg.end > clip.startTime + 0.1 && seg.start < clip.endTime - 0.1)
+          .map((seg) => ({
+            start: Number(Math.max(clip.startTime, seg.start).toFixed(2)),
+            end: Number(Math.min(clip.endTime, seg.end).toFixed(2)),
+            text: seg.text
+          }));
+
+        if (matched.length > 0) {
+          clip.captions = matched;
+          clip.isVoiceSynced = true;
+          return true;
+        }
+        return false;
+      },
+
+      async transcribeSingleClip(clipIndex) {
+        const clip = state.clips[clipIndex];
+        if (!clip) return;
+
+        if (state.sourceType === 'local' && state.localVideoFile) {
+          const btn = document.getElementById('editor-transcribe-clip-btn');
+          const topBtn = document.getElementById('transcribe-voice-btn');
+          if (btn) btn.textContent = '⏳ Mendengarkan suara...';
+          if (topBtn) topBtn.textContent = '⏳ Syncing...';
+
+          showToast(`Mentranskrip suara asli Klip #${clipIndex + 1}...`, 'info');
+          const segs = await this.transcribeAudioSegment(
+            state.localVideoFile,
+            clip.startTime,
+            clip.duration + 1
+          );
+
+          if (btn) btn.textContent = '🎙️ Transkrip Suara Klip';
+          if (topBtn) topBtn.textContent = '🎙️ Sync Suara';
+
+          if (segs.length > 0) {
+            clip.captions = segs.map((s) => ({
+              start: Number(Math.max(clip.startTime, s.start).toFixed(2)),
+              end: Number(Math.min(clip.endTime, s.end).toFixed(2)),
+              text: s.text
+            }));
+            clip.isVoiceSynced = true;
+            state.subtitleMode = 'voice';
+            updateSubtitleSourceBadge();
+            renderClipsList();
+            renderClipCaptionsEditor(clip);
+            const capEl = document.getElementById('caption-text');
+            if (capEl && clip.captions[0]) capEl.textContent = clip.captions[0].text;
+            showToast(`Berhasil! ${clip.captions.length} baris subtitle disinkronkan dengan suara asli.`, 'success');
+          } else {
+            showToast('Tidak terdeteksi ucapan jelas pada segmen ini atau koneksi sibuk.', 'error');
+          }
+        } else {
+          this.toggleLiveSpeechRecognition();
+        }
+      },
+
+      toggleLiveSpeechRecognition() {
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRec) {
+          showToast('Browser Anda tidak mendukung Live Speech-to-Text. Gunakan Chrome/Edge atau Upload MP4 Asli.', 'error');
+          return;
+        }
+
+        if (state.isListeningStt && this.recognition) {
+          this.stopLiveSpeechRecognition();
+          showToast('Perekaman transkrip suara langsung dihentikan.', 'info');
+          return;
+        }
+
+        const clip = state.clips[state.activeClipIndex];
+        if (!clip) {
+          showToast('Pilih klip terlebih dahulu sebelum menyinkronkan suara.', 'error');
+          return;
+        }
+
+        const langVal = document.getElementById('stt-lang-select')?.value || 'id-ID';
+        const rec = new SpeechRec();
+        rec.lang = langVal;
+        rec.continuous = true;
+        rec.interimResults = true;
+
+        const capturedCaptions = [];
+        let phraseStartSec = null;
+
+        const getCurrentPlaybackSec = () => {
+          if (state.sourceType === 'local') {
+            return document.getElementById('local-video-player')?.currentTime || clip.startTime;
+          }
+          if (state.player && typeof state.player.getCurrentTime === 'function') {
+            return state.player.getCurrentTime() || clip.startTime;
+          }
+          return clip.startTime;
+        };
+
+        rec.onstart = () => {
+          state.isListeningStt = true;
+          state.subtitleMode = 'live-stt';
+          updateSubtitleSourceBadge();
+          const topBtn = document.getElementById('transcribe-voice-btn');
+          const edBtn = document.getElementById('editor-transcribe-clip-btn');
+          if (topBtn) {
+            topBtn.textContent = '🔴 Stop Sync Suara';
+            topBtn.className = 'px-2.5 py-1.5 rounded-xl text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/40 animate-pulse transition cursor-pointer';
+          }
+          if (edBtn) edBtn.textContent = '🔴 Merekam Suara...';
+
+          state.isMuted = false;
+          if (state.volume === 0) state.volume = 100;
+          updateVolumeUI();
+          playClipSegment(state.activeClipIndex, true);
+          showToast('Mendengarkan suara video... Subtitle otomatis tercatat saat video diputar!', 'success');
+        };
+
+        rec.onresult = (event) => {
+          const curSec = getCurrentPlaybackSec();
+          if (phraseStartSec === null) phraseStartSec = curSec;
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const res = event.results[i];
+            const transcript = String(res[0]?.transcript || '').trim().toUpperCase();
+            if (!transcript) continue;
+
+            const capEl = document.getElementById('caption-text');
+            if (capEl) capEl.textContent = transcript;
+
+            if (res.isFinal) {
+              const s = Math.max(clip.startTime, Math.min(clip.endTime - 0.5, phraseStartSec));
+              const e = Math.min(clip.endTime, Math.max(s + 0.8, curSec));
+              capturedCaptions.push({
+                start: Number(s.toFixed(2)),
+                end: Number(e.toFixed(2)),
+                text: transcript
+              });
+              clip.captions = [...capturedCaptions];
+              clip.isVoiceSynced = true;
+              renderClipCaptionsEditor(clip);
+              renderClipsList();
+              phraseStartSec = null;
+            }
+          }
+        };
+
+        rec.onerror = () => {
+          this.stopLiveSpeechRecognition();
+        };
+
+        rec.onend = () => {
+          if (state.isListeningStt) {
+            try { rec.start(); } catch (e) { this.stopLiveSpeechRecognition(); }
+          }
+        };
+
+        this.recognition = rec;
+        try {
+          rec.start();
+        } catch (e) {
+          showToast('Gagal memulai pengenalan suara browser.', 'error');
+        }
+      },
+
+      stopLiveSpeechRecognition() {
+        state.isListeningStt = false;
+        if (this.recognition) {
+          try { this.recognition.stop(); } catch (e) {}
+          this.recognition = null;
+        }
+        const topBtn = document.getElementById('transcribe-voice-btn');
+        const edBtn = document.getElementById('editor-transcribe-clip-btn');
+        if (topBtn) {
+          topBtn.textContent = '🎙️ Sync Suara';
+          topBtn.className = 'px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/35 hover:bg-emerald-500/25 transition cursor-pointer';
+        }
+        if (edBtn) edBtn.textContent = '🎙️ Transkrip Suara Klip';
+        updateSubtitleSourceBadge();
+      }
+    };
+
+    function updateSubtitleSourceBadge() {
+      const pill = document.getElementById('subtitle-source-pill');
+      if (!pill) return;
+      const activeClip = state.clips[state.activeClipIndex];
+      if (state.isListeningStt) {
+        pill.textContent = '🔴 Live Speech-to-Text Aktif';
+        pill.className = 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-500/20 border border-red-500/40 text-red-300';
+      } else if (activeClip?.isVoiceSynced || state.subtitleMode === 'voice') {
+        pill.textContent = '🎙️ Subtitle Sesuai Suara Asli';
+        pill.className = 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/35 text-emerald-300';
+      } else {
+        pill.textContent = '💬 Subtitle: Smart AI';
+        pill.className = 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400';
+      }
+    }
+
+    function renderClipCaptionsEditor(clip) {
+      const listEl = document.getElementById('clip-captions-editor-list');
+      if (!listEl) return;
+      if (!clip || !Array.isArray(clip.captions) || clip.captions.length === 0) {
+        listEl.innerHTML = '';
+        return;
+      }
+
+      listEl.innerHTML = clip.captions
+        .map((cap, cIdx) => {
+          const relStart = Math.max(0, cap.start - clip.startTime);
+          return `
+            <div class="flex items-center gap-1.5 bg-zinc-900/90 border border-zinc-800/90 rounded-lg px-2 py-1">
+              <button
+                type="button"
+                data-seek-sec="${cap.start}"
+                class="caption-seek-btn text-[10px] font-mono font-bold text-purple-300 hover:text-purple-200 shrink-0 cursor-pointer"
+                title="Lompat ke detik ini"
+              >
+                ${formatTime(relStart)}
+              </button>
+              <input
+                type="text"
+                data-cap-idx="${cIdx}"
+                value="${String(cap.text || '').replace(/"/g, '&quot;')}"
+                class="caption-line-input flex-1 bg-transparent text-[11px] text-zinc-200 focus:text-white outline-none min-w-0"
+              />
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    // =========================================================================
+    // 3. MESIN AI AUTO-REFRAME & EDITOR FRAMING MANUAL
+    // =========================================================================
+    const SpeakerReframer = {
+      previewTracker: null,
+      isDraggingFrame: false,
+
+      ensurePreviewTracker() {
+        if (!this.previewTracker) {
+          const scanCanvas = document.createElement('canvas');
+          scanCanvas.width = 64;
+          scanCanvas.height = 36;
+          this.previewTracker = {
+            panX: 0.5,
+            velX: 0,
+            lastScanTs: 0,
+            prevFrame: null,
+            scanCanvas,
+            scanCtx: scanCanvas.getContext('2d', { willReadFrequently: true })
+          };
+        }
+        return this.previewTracker;
+      },
+
+      getActiveClip() {
+        if (state.activeClipIndex >= 0 && state.clips[state.activeClipIndex]) {
+          return state.clips[state.activeClipIndex];
+        }
+        return state.clips[0] || null;
+      },
+
+      ensureClipFraming(clip) {
+        if (!clip) {
+          return {
+            mode: state.reframeMode || 'auto',
+            panX: 0.5,
+            panY: 0.5,
+            zoom: 1.05
+          };
+        }
+        if (!clip.framing) {
+          clip.framing = {
+            mode: state.reframeEnabled ? (state.reframeMode || 'auto') : 'center',
+            panX: 0.5,
+            panY: 0.5,
+            zoom: 1.05
+          };
+        }
+        return clip.framing;
+      },
+
+      resetTracker() {
+        const tracker = this.ensurePreviewTracker();
+        tracker.panX = 0.5;
+        tracker.velX = 0;
+        tracker.prevFrame = null;
+        tracker.lastScanTs = 0;
+      },
+
+      syncEditorControls(framing) {
+        const f = framing || { mode: 'auto', panX: 0.5, panY: 0.5, zoom: 1.05 };
+        const panXEl = document.getElementById('framing-pan-x');
+        const panYEl = document.getElementById('framing-pan-y');
+        const zoomEl = document.getElementById('framing-zoom');
+        const panXVal = document.getElementById('framing-pan-x-val');
+        const panYVal = document.getElementById('framing-pan-y-val');
+        const zoomVal = document.getElementById('framing-zoom-val');
+        const pill = document.getElementById('framing-mode-pill');
+        const modeSelect = document.getElementById('reframe-mode-select');
+
+        const pctX = Math.round((f.panX ?? 0.5) * 100);
+        const pctY = Math.round((f.panY ?? 0.5) * 100);
+        const zoomNum = Number(f.zoom ?? 1.05);
+
+        if (panXEl && document.activeElement !== panXEl) panXEl.value = pctX;
+        if (panYEl && document.activeElement !== panYEl) panYEl.value = pctY;
+        if (zoomEl && document.activeElement !== zoomEl) zoomEl.value = Math.round(zoomNum * 100);
+
+        if (panXVal) panXVal.textContent = `${pctX}%`;
+        if (panYVal) panYVal.textContent = `${pctY}%`;
+        if (zoomVal) zoomVal.textContent = `${zoomNum.toFixed(2)}x`;
+
+        const modeLabels = {
+          auto: 'Auto AI',
+          podcast: 'Podcast 2P',
+          cinematic: 'Sinematik',
+          manual: 'Manual',
+          center: 'Statis'
+        };
+        if (pill) {
+          pill.textContent = modeLabels[f.mode] || 'Auto AI';
+        }
+        if (modeSelect && f.mode && modeSelect.value !== f.mode) {
+          modeSelect.value = f.mode;
+        }
+      },
+
+      setManualFraming(partial, syncSliders = true) {
+        const clip = this.getActiveClip();
+        const framing = this.ensureClipFraming(clip);
+
+        framing.mode = 'manual';
+        if (typeof partial.panX === 'number') {
+          framing.panX = Math.min(1, Math.max(0, partial.panX));
+        }
+        if (typeof partial.panY === 'number') {
+          framing.panY = Math.min(1, Math.max(0, partial.panY));
+        }
+        if (typeof partial.zoom === 'number') {
+          framing.zoom = Math.min(2.2, Math.max(1.0, partial.zoom));
+        }
+
+        state.reframeEnabled = false;
+        state.reframeMode = 'manual';
+
+        const btn = document.getElementById('toggle-reframe-btn');
+        const label = document.getElementById('toggle-reframe-label');
+        if (btn) {
+          btn.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-500/15 text-purple-300 border border-purple-500/35 hover:bg-purple-500/25 transition cursor-pointer';
+        }
+        if (label) label.textContent = 'Framing: Manual';
+
+        if (syncSliders) {
+          this.syncEditorControls(framing);
+        } else {
+          const panXVal = document.getElementById('framing-pan-x-val');
+          const panYVal = document.getElementById('framing-pan-y-val');
+          const zoomVal = document.getElementById('framing-zoom-val');
+          const panXEl = document.getElementById('framing-pan-x');
+          const panYEl = document.getElementById('framing-pan-y');
+          const zoomEl = document.getElementById('framing-zoom');
+          if (panXEl) panXEl.value = Math.round(framing.panX * 100);
+          if (panYEl) panYEl.value = Math.round(framing.panY * 100);
+          if (zoomEl) zoomEl.value = Math.round(framing.zoom * 100);
+          if (panXVal) panXVal.textContent = `${Math.round(framing.panX * 100)}%`;
+          if (panYVal) panYVal.textContent = `${Math.round(framing.panY * 100)}%`;
+          if (zoomVal) zoomVal.textContent = `${framing.zoom.toFixed(2)}x`;
+        }
+
+        this.applyToPreview(framing.panX, true, framing.panY, framing.zoom);
+      },
+
+      computeSimulatedSpeakerX(mode, elapsedSec, seed = 1) {
+        if (mode === 'center') return 0.5;
+        if (mode === 'podcast') {
+          const turn = Math.floor((elapsedSec + seed * 1.7) / 4.2) % 2;
+          const micro = Math.sin(elapsedSec * 1.4) * 0.025;
+          return turn === 0 ? 0.27 + micro : 0.73 + micro;
+        }
+        if (mode === 'cinematic') {
+          return 0.5 + Math.sin(elapsedSec * 0.45 + seed) * 0.24;
+        }
+        const primary = Math.sin(elapsedSec * 0.65 + seed * 1.3) * 0.18;
+        const secondary = Math.sin(elapsedSec * 1.9 + seed) * 0.04;
+        return Math.min(0.84, Math.max(0.16, 0.5 + primary + secondary));
+      },
+
+      analyzeVideoFrameSpeaker(videoEl, tracker, dt = 0.15) {
+        if (!videoEl || videoEl.readyState < 2 || !tracker.scanCtx) {
+          return tracker.panX;
+        }
+
+        const w = tracker.scanCanvas.width;
+        const h = tracker.scanCanvas.height;
+        try {
+          tracker.scanCtx.drawImage(videoEl, 0, 0, w, h);
+          const frame = tracker.scanCtx.getImageData(0, 0, w, h).data;
+
+          let weightedX = 0;
+          let totalWeight = 0;
+
+          if (tracker.prevFrame) {
+            const yStart = Math.floor(h * 0.15);
+            const yEnd = Math.floor(h * 0.78);
+            for (let y = yStart; y < yEnd; y++) {
+              for (let x = 2; x < w - 2; x++) {
+                const idx = (y * w + x) * 4;
+                const diff =
+                  Math.abs(frame[idx] - tracker.prevFrame[idx]) +
+                  Math.abs(frame[idx + 1] - tracker.prevFrame[idx + 1]) +
+                  Math.abs(frame[idx + 2] - tracker.prevFrame[idx + 2]);
+
+                if (diff > 36) {
+                  const weight = diff * diff;
+                  weightedX += (x / w) * weight;
+                  totalWeight += weight;
+                }
+              }
+            }
+          }
+
+          tracker.prevFrame = new Uint8ClampedArray(frame);
+
+          let targetX = tracker.panX;
+          if (totalWeight > 12000) {
+            const centroid = weightedX / totalWeight;
+            targetX = Math.min(0.84, Math.max(0.16, centroid));
+          } else {
+            targetX = tracker.panX + (0.5 - tracker.panX) * 0.08;
+          }
+
+          const stiffness = 6.5;
+          const damping = 4.2;
+          const force = (targetX - tracker.panX) * stiffness;
+          tracker.velX = (tracker.velX + force * dt) * Math.max(0, 1 - damping * dt);
+          tracker.panX = Math.min(0.86, Math.max(0.14, tracker.panX + tracker.velX * dt));
+        } catch (e) {
+          // Abaikan jika frame belum siap
+        }
+        return tracker.panX;
+      },
+
+      stepPreview(videoEl, currentSec) {
+        const clip = this.getActiveClip();
+        const framing = this.ensureClipFraming(clip);
+        const tracker = this.ensurePreviewTracker();
+
+        if (state.aspectRatio === 'fit-blur') {
+          this.applyToPreview(0.5, false, framing.panY ?? 0.5, 1.0);
+          return;
+        }
+
+        if (state.aspectRatio !== '9:16') {
+          this.applyToPreview(0.5, false, 0.5, 1.0);
+          return;
+        }
+
+        if (framing.mode === 'manual' || !state.reframeEnabled) {
+          const px = framing.mode === 'manual' ? framing.panX : 0.5;
+          const py = framing.mode === 'manual' ? framing.panY : 0.5;
+          const zm = framing.mode === 'manual' ? framing.zoom : 1.0;
+          tracker.panX = px;
+          this.applyToPreview(px, framing.mode === 'manual', py, zm);
+          return;
+        }
+
+        const elapsed = Math.max(0, currentSec - (clip ? clip.startTime : 0));
+        const mode = framing.mode || state.reframeMode || 'auto';
+        let panX = 0.5;
+
+        if (state.sourceType === 'local' && videoEl && mode === 'auto') {
+          panX = this.analyzeVideoFrameSpeaker(videoEl, tracker, 0.15);
+        } else {
+          const seed = (state.activeClipIndex + 1) * 1.3;
+          const targetX = this.computeSimulatedSpeakerX(mode, elapsed, seed);
+          tracker.panX += (targetX - tracker.panX) * 0.22;
+          panX = tracker.panX;
+        }
+
+        this.applyToPreview(panX, true, framing.panY ?? 0.5, framing.zoom ?? 1.05);
+      },
+
+      applyToPreview(panX = 0.5, showHud = true, panY = 0.5, zoom = 1.05) {
+        const clampedX = Math.min(1, Math.max(0, panX));
+        const clampedY = Math.min(1, Math.max(0, panY));
+        const clampedZoom = Math.min(2.2, Math.max(1.0, zoom));
+
+        const localVid = document.getElementById('local-video-player');
+        if (localVid) {
+          if (state.aspectRatio === 'fit-blur') {
+            localVid.style.objectPosition = `50% ${(clampedY * 100).toFixed(1)}%`;
+            localVid.style.transform = 'none';
+            localVid.style.transformOrigin = '50% 50%';
+          } else {
+            localVid.style.objectPosition = `${(clampedX * 100).toFixed(1)}% ${(clampedY * 100).toFixed(1)}%`;
+            localVid.style.transform = `scale(${clampedZoom.toFixed(3)})`;
+            localVid.style.transformOrigin = `${(clampedX * 100).toFixed(1)}% ${(clampedY * 100).toFixed(1)}%`;
+          }
+        }
+
+        const ytWrapper = document.getElementById('yt-player-wrapper');
+        if (ytWrapper) {
+          if (state.aspectRatio === 'fit-blur') {
+            ytWrapper.style.top = `${(50 + (clampedY - 0.5) * 35).toFixed(2)}%`;
+          } else {
+            ytWrapper.style.top = '';
+          }
+        }
+
+        const ytTarget =
+          document.querySelector('#yt-player-wrapper iframe') ||
+          document.getElementById('yt-player-placeholder');
+        if (ytTarget) {
+          if (state.aspectRatio === '9:16') {
+            const offsetLeftPct = 50 + (0.5 - clampedX) * 120;
+            const offsetTopPct = 50 + (0.5 - clampedY) * 40;
+            ytTarget.style.left = `${offsetLeftPct.toFixed(2)}%`;
+            ytTarget.style.top = `${offsetTopPct.toFixed(2)}%`;
+            ytTarget.style.transform = `translate(-50%, -50%) scale(${clampedZoom.toFixed(3)})`;
+          } else {
+            ytTarget.style.left = '50%';
+            ytTarget.style.top = '50%';
+            ytTarget.style.transform = 'translate(-50%, -50%) scale(1)';
+          }
+        }
+
+        const hudBadge = document.getElementById('reframe-hud-badge');
+        const hudLabel = document.getElementById('reframe-hud-label');
+        const hudDot = document.getElementById('reframe-hud-dot');
+
+        if (hudBadge) {
+          if (showHud && state.aspectRatio === '9:16' && !ClipExporter.active) {
+            hudBadge.classList.remove('hidden');
+            const posText =
+              clampedX < 0.38
+                ? 'Pembicara Kiri'
+                : clampedX > 0.62
+                ? 'Pembicara Kanan'
+                : 'Pembicara Tengah';
+            const clip = this.getActiveClip();
+            const isManual = clip?.framing?.mode === 'manual';
+            if (hudLabel) {
+              hudLabel.textContent = isManual
+                ? `✋ Manual: ${posText} (${clampedZoom.toFixed(2)}x)`
+                : `🎯 Auto-Reframe: ${posText}`;
+            }
+            if (hudDot) {
+              hudDot.style.left = `${(clampedX * 100).toFixed(1)}%`;
+            }
+          } else {
+            hudBadge.classList.add('hidden');
+          }
+        }
+      }
+    };
+
+    // =========================================================================
+    // 4. YOUTUBE IFRAME API & PEMUTAR VIDEO LOKAL
+    // =========================================================================
+    function loadYouTubeIframeAPI() {
+      if (window.YT && window.YT.Player) {
+        state.ytApiReady = true;
+        return;
+      }
+      if (!document.getElementById('yt-iframe-api-script')) {
+        const tag = document.createElement('script');
+        tag.id = 'yt-iframe-api-script';
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      }
+      window.onYouTubeIframeAPIReady = () => {
+        state.ytApiReady = true;
+        if (state.sourceType === 'youtube' && state.videoId && !state.player) {
+          const start = state.clips[0]?.startTime || 0;
+          initOrLoadYouTubePlayer(state.videoId, start);
+        }
+      };
+    }
+
+    function initOrLoadYouTubePlayer(videoId, startSec = 0) {
+      const ytWrapper = document.getElementById('yt-player-wrapper');
+      const localVid = document.getElementById('local-video-player');
+      const bgBlurVid = document.getElementById('local-bg-blur-player');
+      if (ytWrapper) ytWrapper.classList.remove('hidden');
+      if (localVid) {
+        localVid.pause();
+        localVid.classList.add('hidden');
+      }
+      if (bgBlurVid) {
+        bgBlurVid.pause();
+        bgBlurVid.classList.add('hidden');
+      }
+      updatePortraitBlurLayer();
+      if (state.player && typeof state.player.loadVideoById === 'function') {
+        state.player.loadVideoById({ videoId, startSeconds: startSec });
+        applyVolumeToActivePlayer();
+        return;
+      }
+
+      const playerVars = {
+        autoplay: 1,
+        controls: 0,
+        modestbranding: 1,
+        rel: 0,
+        playsinline: 1,
+        start: Math.floor(startSec)
+      };
+
+      if (window.location.protocol.startsWith('http') && window.location.origin) {
+        playerVars.origin = window.location.origin;
+      }
+
+      state.player = new YT.Player('yt-player-placeholder', {
+        videoId,
+        playerVars,
+        events: {
+          onReady: (event) => {
+            applyVolumeToActivePlayer();
+            if (typeof event.target.getDuration === 'function') {
+              const realDur = event.target.getDuration();
+              if (realDur && realDur > 10) {
+                state.videoDuration = Math.floor(realDur);
+                const durBadge = document.getElementById('video-duration-badge');
+                if (durBadge) durBadge.textContent = `Durasi: ${formatTime(state.videoDuration)}`;
+              }
+            }
+            event.target.playVideo();
+            updatePlayPauseIcon(true);
+          },
+          onStateChange: (event) => {
+            if (event.data === YT.PlayerState.PLAYING) {
+              updatePlayPauseIcon(true);
+            } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+              updatePlayPauseIcon(false);
+            }
+          },
+          onError: (event) => {
+            if (window.location.protocol === 'file:') {
+              showToast('YouTube memblokir pemutaran dari file://. Jalankan lewat server lokal (npx serve / python -m http.server).', 'error');
+            } else if (event.data === 101 || event.data === 150) {
+              showToast('Pemilik video menonaktifkan embed luar YouTube. Coba link lain atau Upload MP4 Asli.', 'error');
+            }
+          }
+        }
+      });
+    }
+
+    async function handleLocalVideoUpload(file) {
+      if (!file) return;
+      if (!file.type.startsWith('video/') && !/\.(mp4|mov|webm|mkv|avi)$/i.test(file.name)) {
+        showToast('Format file harus berupa video (MP4, MOV, WebM, MKV).', 'error');
+        return;
+      }
+
+      const statusBanner = document.getElementById('status-banner');
+      const statusMsg = document.getElementById('status-msg');
+      const statusSub = document.getElementById('status-sub');
+      if (statusBanner) statusBanner.classList.remove('hidden');
+      if (statusMsg) statusMsg.textContent = `Memuat file "${file.name}"...`;
+      if (statusSub) statusSub.textContent = 'Mendeteksi durasi asli & menyiapkan pemotong otomatis';
+
+      if (state.localVideoUrl) {
+        URL.revokeObjectURL(state.localVideoUrl);
+      }
+
+      state.sourceType = 'local';
+      state.localVideoFile = file;
+      state.localVideoUrl = URL.createObjectURL(file);
+      state.videoId = null;
+      state.videoTitle = file.name.replace(/\.[^/.]+$/, '');
+      state.topicFocus = (document.getElementById('topic-focus')?.value || '').trim();
+
+      if (state.player && typeof state.player.pauseVideo === 'function') {
+        try { state.player.pauseVideo(); } catch (e) {}
+      }
+      document.getElementById('yt-player-wrapper')?.classList.add('hidden');
+
+      const localVid = document.getElementById('local-video-player');
+      const bgBlurVid = document.getElementById('local-bg-blur-player');
+      if (!localVid) return;
+
+      localVid.classList.remove('hidden');
+      localVid.src = state.localVideoUrl;
+      localVid.load();
+
+      if (bgBlurVid) {
+        bgBlurVid.src = state.localVideoUrl;
+        bgBlurVid.load();
+      }
+
+      await new Promise((resolve) => {
+        if (localVid.readyState >= 1) return resolve();
+        localVid.onloadedmetadata = resolve;
+        localVid.onerror = resolve;
+        setTimeout(resolve, 4000);
+      });
+
+      const realDur = Number(localVid.duration);
+      state.videoDuration = isFinite(realDur) && realDur > 5 ? Math.floor(realDur) : 120;
+
+      if (statusMsg) statusMsg.textContent = 'Mentranskrip suara pembicara & mencari momen viral...';
+      if (statusSub) statusSub.textContent = 'Sinkronisasi subtitle otomatis sesuai ucapan asli di video';
+
+      state.fullVoiceTranscript = await VoiceTranscriber.transcribeAudioSegment(
+        file,
+        0,
+        Math.min(180, state.videoDuration)
+      );
+      state.subtitleMode = state.fullVoiceTranscript.length > 0 ? 'voice' : 'ai';
+
+      state.clips = await generateViralClipsWithAI(
+        state.videoTitle,
+        state.videoDuration,
+        state.targetDuration,
+        state.topicFocus,
+        state.fullVoiceTranscript
+      );
+
+      if (statusBanner) statusBanner.classList.add('hidden');
+      document.getElementById('empty-state')?.classList.add('hidden');
+      document.getElementById('workspace-section')?.classList.remove('hidden');
+      document.getElementById('batch-download-btn')?.classList.remove('hidden');
+
+      const sourceBadge = document.getElementById('video-source-badge');
+      if (sourceBadge) {
+        sourceBadge.textContent = 'MP4 Lokal';
+        sourceBadge.className = 'px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0';
+      }
+      const titleDisplay = document.getElementById('video-title-display');
+      if (titleDisplay) titleDisplay.textContent = state.videoTitle;
+
+      const durBadge = document.getElementById('video-duration-badge');
+      if (durBadge) durBadge.textContent = `Durasi: ${formatTime(state.videoDuration)}`;
+
+      renderClipsList();
+      setAspectRatio(state.aspectRatio);
+      playClipSegment(0, true);
+      showToast(
+        state.fullVoiceTranscript.length > 0
+          ? `Video siap! ${state.clips.length} klip & subtitle sesuai suara berhasil dibuat.`
+          : `Video siap! ${state.clips.length} klip otomatis berhasil dibuat.`,
+        'success'
+      );
+    }
+
+    function applyVolumeToActivePlayer() {
+      const effectiveVol = state.isMuted ? 0 : state.volume;
+      const localVid = document.getElementById('local-video-player');
+      if (localVid) {
+        localVid.muted = state.isMuted || effectiveVol === 0;
+        localVid.volume = Math.min(1, Math.max(0, effectiveVol / 100));
+      }
+      if (state.player) {
+        try {
+          if (state.isMuted || effectiveVol === 0) {
+            if (typeof state.player.mute === 'function') state.player.mute();
+          } else {
+            if (typeof state.player.unMute === 'function') state.player.unMute();
+            if (typeof state.player.setVolume === 'function') state.player.setVolume(effectiveVol);
+          }
+        } catch (e) {}
+      }
+    }
+
+    function updatePlayPauseIcon(isPlaying) {
+      const iconEl = document.getElementById('play-pause-icon');
+      const textEl = document.getElementById('play-pause-text');
+      if (iconEl) iconEl.textContent = isPlaying ? '⏸' : '▶';
+      if (textEl) textEl.textContent = isPlaying ? 'Jeda' : 'Putar';
+    }
+
+    function updatePortraitBlurLayer() {
+      const layer = document.getElementById('portrait-blur-bg-layer');
+      const bgVid = document.getElementById('local-bg-blur-player');
+      const bgImg = document.getElementById('yt-bg-blur-img');
+      const tint = document.getElementById('portrait-bg-tint');
+      if (!layer) return;
+
+      if (state.aspectRatio !== 'fit-blur') {
+        layer.classList.add('hidden');
+        if (bgVid) bgVid.pause();
+        return;
+      }
+
+      layer.classList.remove('hidden');
+      const style = state.portraitBgStyle || 'blur-video';
+
+      if (style === 'gradient-purple') {
+        bgVid?.classList.add('hidden');
+        bgImg?.classList.add('hidden');
+        if (bgVid) bgVid.pause();
+        if (tint) {
+          tint.className = 'absolute inset-0 bg-gradient-to-b from-purple-950 via-zinc-950 to-indigo-950';
+        }
+        return;
+      }
+
+      const blurFilterClass =
+        style === 'blur-dark'
+          ? 'blur-2xl brightness-50 saturate-110'
+          : 'blur-xl brightness-75 saturate-125';
+
+      if (tint) {
+        tint.className =
+          style === 'blur-dark'
+            ? 'absolute inset-0 bg-black/55'
+            : 'absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/55';
+      }
+
+      if (state.sourceType === 'local' && state.localVideoUrl && bgVid) {
+        bgImg?.classList.add('hidden');
+        bgVid.className = `absolute -inset-6 w-[calc(100%+48px)] h-[calc(100%+48px)] object-cover scale-110 ${blurFilterClass}`;
+        const mainVid = document.getElementById('local-video-player');
+        if (mainVid) {
+          bgVid.currentTime = mainVid.currentTime || 0;
+          if (!mainVid.paused) {
+            bgVid.play().catch(() => {});
+          }
+        }
+      } else {
+        bgVid?.classList.add('hidden');
+        if (bgVid) bgVid.pause();
+        if (bgImg && state.videoId) {
+          bgImg.src = `https://i.ytimg.com/vi/${state.videoId}/hqdefault.jpg`;
+          bgImg.className = `absolute -inset-6 w-[calc(100%+48px)] h-[calc(100%+48px)] object-cover scale-125 ${blurFilterClass}`;
+        }
+      }
+    }
+
+    function setAspectRatio(ratio) {
+      if (ratio === '16:9' || ratio === 'fit-blur') {
+        state.aspectRatio = ratio;
+      } else {
+        state.aspectRatio = '9:16';
+      }
+
+      const container = document.getElementById('aspect-container');
+      const btn916 = document.getElementById('ratio-9-16-btn');
+      const btnFitBlur = document.getElementById('ratio-fit-blur-btn');
+      const btn169 = document.getElementById('ratio-16-9-btn');
+      const reframeBar = document.getElementById('reframe-control-bar');
+      const portraitBgBar = document.getElementById('portrait-bg-bar');
+      const editorPanel = document.getElementById('framing-editor-panel');
+
+      const activeTabClass = 'px-2.5 py-1.5 rounded-lg text-xs font-bold bg-purple-600 text-white shadow transition cursor-pointer';
+      const inactiveTabClass = 'px-2.5 py-1.5 rounded-lg text-xs font-bold text-zinc-400 hover:text-white transition cursor-pointer';
+
+      if (btn916) btn916.className = state.aspectRatio === '9:16' ? activeTabClass : inactiveTabClass;
+      if (btnFitBlur) btnFitBlur.className = state.aspectRatio === 'fit-blur' ? activeTabClass : inactiveTabClass;
+      if (btn169) btn169.className = state.aspectRatio === '16:9' ? activeTabClass : inactiveTabClass;
+
+      if (state.aspectRatio === '9:16') {
+        if (container) {
+          container.className = 'yt-crop-9-16 max-w-[290px] sm:max-w-[310px] mx-auto rounded-xl shadow-2xl border border-zinc-800 cursor-grab active:cursor-grabbing select-none';
+        }
+        portraitBgBar?.classList.add('hidden');
+        reframeBar?.classList.remove('hidden');
+        editorPanel?.classList.remove('hidden');
+        updatePortraitBlurLayer();
+        const clip = SpeakerReframer.getActiveClip();
+        const framing = SpeakerReframer.ensureClipFraming(clip);
+        SpeakerReframer.applyToPreview(
+          framing.mode === 'manual' ? framing.panX : SpeakerReframer.ensurePreviewTracker().panX,
+          true,
+          framing.panY,
+          framing.zoom
+        );
+      } else if (state.aspectRatio === 'fit-blur') {
+        if (container) {
+          container.className = 'yt-fit-blur-9-16 max-w-[290px] sm:max-w-[310px] mx-auto rounded-xl shadow-2xl border border-zinc-800 cursor-pointer select-none';
+        }
+        reframeBar?.classList.add('hidden');
+        editorPanel?.classList.add('hidden');
+        portraitBgBar?.classList.remove('hidden');
+        updatePortraitBlurLayer();
+        const clip = SpeakerReframer.getActiveClip();
+        const framing = SpeakerReframer.ensureClipFraming(clip);
+        SpeakerReframer.applyToPreview(0.5, false, framing.panY ?? 0.5, 1.0);
+      } else {
+        if (container) {
+          container.className = 'yt-crop-16-9 w-full mx-auto rounded-xl shadow-2xl border border-zinc-800 cursor-pointer select-none';
+        }
+        reframeBar?.classList.add('hidden');
+        portraitBgBar?.classList.add('hidden');
+        editorPanel?.classList.add('hidden');
+        updatePortraitBlurLayer();
+        SpeakerReframer.applyToPreview(0.5, false, 0.5, 1.0);
+      }
+    }
+
+    function applyCaptionThemeStyle() {
+      const capEl = document.getElementById('caption-text');
+      if (!capEl) return;
+      capEl.classList.remove('tiktok-caption-classic', 'tiktok-caption-yellow', 'tiktok-caption-neon');
+      if (state.captionTheme === 'yellow') {
+        capEl.classList.add('tiktok-caption-yellow');
+      } else if (state.captionTheme === 'neon') {
+        capEl.classList.add('tiktok-caption-neon');
+      } else {
+        capEl.classList.add('tiktok-caption-classic');
+      }
+    }
+
+    // =========================================================================
+    // 5. GENERATOR SEGMEN KLIP VIRAL (GEMINI API + SMART FALLBACK)
+    // =========================================================================
+    function buildSmartFallbackClips(title, totalDuration, targetDuration, topicFocus) {
+      const safeTotal = Math.max(20, Math.floor(totalDuration || 240));
+      const clipLen = Math.min(targetDuration, Math.max(10, safeTotal - 2));
+      const desiredCount = safeTotal <= clipLen + 5 ? 2 : 4;
+      const maxStart = Math.max(0, safeTotal - clipLen);
+
+      const hookTemplates = [
+        {
+          title: `Rahasia Utama di Balik ${topicFocus || title.slice(0, 32)}`,
+          reason: 'Hook pembuka kuat dengan rasa penasaran tinggi dalam 3 detik pertama.',
+          score: 97,
+          lines: [
+            'INI BAGIAN YANG PALING BANYAK ORANG LEWATKAN',
+            'PERHATIKAN DETAIL PENTING INI SEKARANG',
+            'HASILNYA BISA BERUBAH DRASTIS DARI SINI',
+            'SIMPAN KLIP INI SUPAYA TIDAK LUPA'
+          ]
+        },
+        {
+          title: `Kesalahan Fatal yang Sering Terjadi (${clipLen} Detik)`,
+          reason: 'Pola kontras masalah & solusi yang memicu komentar dan share.',
+          score: 94,
+          lines: [
+            'JANGAN SAMPAI KAMU MENGULANGI KESALAHAN INI',
+            'BANYAK YANG MENGIRA CARA LAMA MASIH EFEKTIF',
+            'PADAHAL KUNCI SEBENARNYA ADA DI LANGKAH INI',
+            'COBA TERAPKAN MULAI HARI INI JUGA'
+          ]
+        },
+        {
+          title: `Momen Paling Daging & Praktis Langsung Pakai`,
+          reason: 'Inti materi padat tanpa basa-basi sehingga retention rate tinggi.',
+          score: 92,
+          lines: [
+            'LANGSUNG KE INTINYA TANPA BASA-BASI',
+            'INI STRATEGI YANG TERBUKTI PALING CEPAT',
+            'LIHAT BAGAIMANA PROSESNYA BEKERJA OTOMATIS',
+            'BAGIKAN KE TEMAN YANG BUTUH INFO INI'
+          ]
+        },
+        {
+          title: `Kesimpulan Penting yang Wajib Kamu Tahu`,
+          reason: 'Penutup emosional & actionable yang mendorong penonton menonton ulang.',
+          score: 89,
+          lines: [
+            'KALAU KAMU NONTON SAMPAI DETIK INI',
+            'ARTINYA KAMU SIAP NAIK LEVEL SEKARANG',
+            'FOKUS PADA SATU HAL PALING BERDAMPAK',
+            'TULIS PENDAPATMU DI KOLOM KOMENTAR'
+          ]
+        }
+      ];
+
+      const clips = [];
+      for (let i = 0; i < desiredCount; i++) {
+        const fraction = desiredCount === 1 ? 0.1 : i / desiredCount;
+        const startTime = Math.min(maxStart, Math.floor(maxStart * fraction));
+        const endTime = Math.min(safeTotal, startTime + clipLen);
+        const actualDur = Math.max(5, endTime - startTime);
+        const tpl = hookTemplates[i % hookTemplates.length];
+
+        const lineCount = tpl.lines.length;
+        const step = actualDur / lineCount;
+        const captions = tpl.lines.map((txt, idx) => ({
+          start: Number((startTime + idx * step).toFixed(2)),
+          end: Number((startTime + (idx + 1) * step).toFixed(2)),
+          text: txt
+        }));
+
+        clips.push({
+          id: `clip-${i + 1}`,
+          title: tpl.title,
+          hookReason: tpl.reason,
+          score: tpl.score,
+          startTime,
+          endTime,
+          duration: actualDur,
+          captions,
+          framing: {
+            mode: state.reframeEnabled ? (state.reframeMode || 'auto') : 'center',
+            panX: 0.5,
+            panY: 0.5,
+            zoom: 1.05
+          }
+        });
+      }
+      return clips;
+    }
+
+    async function generateViralClipsWithAI(title, totalDuration, targetDuration, topicFocus, voiceTranscript = []) {
+      const safeTotal = Math.max(20, Math.floor(totalDuration || 240));
+      const clipLen = Math.min(targetDuration, Math.max(10, safeTotal - 2));
+
+      try {
+        const hasTranscript = Array.isArray(voiceTranscript) && voiceTranscript.length > 0;
+        const transcriptSummary = hasTranscript
+          ? `\nTranskrip suara asli video (timestamp dalam detik):\n` +
+            voiceTranscript
+              .slice(0, 90)
+              .map((s) => `[${s.start.toFixed(1)}s - ${s.end.toFixed(1)}s] ${s.text}`)
+              .join('\n')
+          : '';
+
+        const prompt = `Kamu adalah editor video viral TikTok/Shorts profesional berbahasa Indonesia.
+Judul video: "${title}"
+Durasi total video: ${safeTotal} detik.
+Target durasi tiap klip: ${clipLen} detik.
+${topicFocus ? `Fokus topik khusus: "${topicFocus}"` : ''}${transcriptSummary}
+
+Buatkan 4 segmen klip terbaik dengan startTime antara 0 hingga ${Math.max(0, safeTotal - clipLen)} detik, durasi masing-masing tepat ${clipLen} detik, judul hook berbahasa Indonesia yang menarik, alasan viral, skor (85-99), dan 4 sampai 6 baris subtitle pendek huruf kapital berbahasa Indonesia yang waktunya berada di dalam rentang [startTime, startTime + ${clipLen}]. ${hasTranscript ? 'Gunakan kalimat persis dari transkrip suara asli di atas pada rentang waktu yang dipilih!' : 'Buat kalimat subtitle bergaya ucapan pembicara yang relevan dengan topik video.'}`;
+
+        const payload = {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  title: { type: 'STRING' },
+                  hookReason: { type: 'STRING' },
+                  score: { type: 'NUMBER' },
+                  startTime: { type: 'NUMBER' },
+                  captions: {
+                    type: 'ARRAY',
+                    items: {
+                      type: 'OBJECT',
+                      properties: {
+                        start: { type: 'NUMBER' },
+                        end: { type: 'NUMBER' },
+                        text: { type: 'STRING' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        };
+
+        const data = await fetchGeminiWithBackoff(payload, 2);
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!rawText) throw new Error('Empty AI response');
+
+        const parsed = JSON.parse(rawText);
+        if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('Invalid clips');
+
+        return parsed.slice(0, 5).map((item, idx) => {
+          const maxStart = Math.max(0, safeTotal - clipLen);
+          const start = Math.min(maxStart, Math.max(0, Math.floor(Number(item.startTime) || 0)));
+          const end = Math.min(safeTotal, start + clipLen);
+          const dur = Math.max(5, end - start);
+
+          let caps = Array.isArray(item.captions) && item.captions.length > 0
+            ? item.captions.map((c, cIdx) => {
+                const segStep = dur / item.captions.length;
+                const cStart = Number(c.start);
+                const cEnd = Number(c.end);
+                const validTiming = isFinite(cStart) && isFinite(cEnd) && cStart >= start && cEnd <= end + 0.5 && cEnd > cStart;
+                return {
+                  start: validTiming ? Number(cStart.toFixed(2)) : Number((start + cIdx * segStep).toFixed(2)),
+                  end: validTiming ? Number(Math.min(end, cEnd).toFixed(2)) : Number((start + (cIdx + 1) * segStep).toFixed(2)),
+                  text: String(c.text || 'SIMAK MOMEN PENTING INI').toUpperCase()
+                };
+              })
+            : [
+                { start, end: start + dur / 2, text: 'PERHATIKAN POIN PENTING INI' },
+                { start: start + dur / 2, end, text: 'JANGAN LUPA SIMPAN & BAGIKAN' }
+              ];
+
+          const clipObj = {
+            id: `clip-${idx + 1}`,
+            title: item.title || `Klip Viral #${idx + 1}`,
+            hookReason: item.hookReason || 'Potensi retensi penonton tinggi di 3 detik awal.',
+            score: Math.min(99, Math.max(80, Math.round(Number(item.score) || 92))),
+            startTime: start,
+            endTime: end,
+            duration: dur,
+            captions: caps,
+            isVoiceSynced: hasTranscript,
+            framing: {
+              mode: state.reframeEnabled ? (state.reframeMode || 'auto') : 'center',
+              panX: 0.5,
+              panY: 0.5,
+              zoom: 1.05
+            }
+          };
+
+          if (hasTranscript) {
+            VoiceTranscriber.mapTranscriptToClip(clipObj, voiceTranscript);
+          }
+          return clipObj;
+        });
+      } catch (err) {
+        const fallback = buildSmartFallbackClips(title, safeTotal, clipLen, topicFocus);
+        if (Array.isArray(voiceTranscript) && voiceTranscript.length > 0) {
+          fallback.forEach((c) => VoiceTranscriber.mapTranscriptToClip(c, voiceTranscript));
+        }
+        return fallback;
+      }
+    }
+
+    // =========================================================================
+    // 6. RENDER DAFTAR KLIP, PEMUTAR SEGMEN & MONITOR REAL-TIME
+    // =========================================================================
+    function renderClipsList() {
+      const listEl = document.getElementById('clips-list');
+      const countBadge = document.getElementById('clips-count-badge');
+      if (countBadge) countBadge.textContent = `${state.clips.length} Klip`;
+      if (!listEl) return;
+
+      listEl.innerHTML = state.clips
+        .map((clip, idx) => {
+          const isActive = idx === state.activeClipIndex;
+          const borderClass = isActive
+            ? 'border-purple-500 bg-purple-950/20 shadow-lg shadow-purple-600/10'
+            : 'border-zinc-800 bg-zinc-900/80 hover:border-zinc-700';
+
+          const previewCaptions = (clip.captions || [])
+            .slice(0, 2)
+            .map((c) => `"${c.text}"`)
+            .join(' • ');
+
+          return `
+            <div
+              data-clip-index="${idx}"
+              class="clip-card rounded-2xl border p-4 transition cursor-pointer ${borderClass}"
+            >
+              <div class="flex items-start justify-between gap-3 mb-2">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="px-2.5 py-0.5 rounded-lg text-xs font-extrabold ${
+                    isActive ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-200'
+                  }">
+                    Klip #${idx + 1}
+                  </span>
+                  <span class="px-2 py-0.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-950 text-zinc-300 border border-zinc-800">
+                    ${formatTime(clip.startTime)} - ${formatTime(clip.endTime)} (${clip.duration}d)
+                  </span>
+                </div>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0">
+                  🔥 Skor ${clip.score}
+                </span>
+              </div>
+
+              <h3 class="text-sm sm:text-base font-extrabold text-white mb-1 leading-snug">
+                ${clip.title}
+              </h3>
+              <p class="text-xs text-zinc-400 mb-2.5 leading-relaxed">
+                💡 ${clip.hookReason}
+              </p>
+
+              ${
+                previewCaptions
+                  ? `<div class="mb-3 px-3 py-2 rounded-xl bg-zinc-950/90 border border-zinc-800/80 text-[11px] text-zinc-300 truncate">
+                      💬 <span class="text-zinc-400">${previewCaptions}</span>
+                    </div>`
+                  : ''
+              }
+
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  data-action="play"
+                  data-index="${idx}"
+                  class="px-3.5 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+                    isActive
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
+                  }"
+                >
+                  ${isActive ? '🔊 Sedang Diputar' : '▶ Pratinjau Klip'}
+                </button>
+
+                <button
+                  type="button"
+                  data-action="download"
+                  data-index="${idx}"
+                  class="px-3.5 py-2 rounded-xl text-xs font-extrabold bg-emerald-500 hover:bg-emerald-400 text-zinc-950 transition cursor-pointer"
+                >
+                  ⬇️ Unduh 1-Klik
+                </button>
+
+                <button
+                  type="button"
+                  data-action="srt"
+                  data-index="${idx}"
+                  class="px-3 py-2 rounded-xl text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition cursor-pointer"
+                >
+                  📄 .SRT
+                </button>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    function playClipSegment(index, autoplay = true) {
+      const clip = state.clips[index];
+      if (!clip) return;
+
+      state.activeClipIndex = index;
+      renderClipsList();
+
+      const framing = SpeakerReframer.ensureClipFraming(clip);
+      SpeakerReframer.resetTracker();
+      SpeakerReframer.syncEditorControls(framing);
+
+      document.getElementById('overlay-top-badge')?.classList.remove('hidden');
+      const clipLabel = document.getElementById('overlay-clip-label');
+      const scoreLabel = document.getElementById('overlay-score-label');
+      if (clipLabel) clipLabel.textContent = `Klip #${index + 1}`;
+      if (scoreLabel) scoreLabel.textContent = `🔥 ${clip.score}`;
+
+      const totalEl = document.getElementById('segment-total-time');
+      const rangeEl = document.getElementById('segment-abs-range');
+      if (totalEl) totalEl.textContent = formatTime(clip.duration);
+      if (rangeEl) rangeEl.textContent = `Asli: ${formatTime(clip.startTime)} - ${formatTime(clip.endTime)}`;
+
+      const firstCap = clip.captions?.[0]?.text || clip.title.toUpperCase();
+      const capEl = document.getElementById('caption-text');
+      if (capEl) capEl.textContent = firstCap;
+      const quickInput = document.getElementById('quick-caption-input');
+      if (quickInput && document.activeElement !== quickInput) {
+        quickInput.value = firstCap;
+      }
+      updateSubtitleSourceBadge();
+      renderClipCaptionsEditor(clip);
+
+      if (state.sourceType === 'local') {
+        const localVid = document.getElementById('local-video-player');
+        const bgBlurVid = document.getElementById('local-bg-blur-player');
+        if (localVid) {
+          localVid.currentTime = clip.startTime;
+          if (bgBlurVid) bgBlurVid.currentTime = clip.startTime;
+          applyVolumeToActivePlayer();
+          if (autoplay) {
+            localVid.play().then(() => updatePlayPauseIcon(true)).catch(() => updatePlayPauseIcon(false));
+            if (state.aspectRatio === 'fit-blur' && bgBlurVid) {
+              bgBlurVid.play().catch(() => {});
+            }
+          }
+        }
+      } else if (state.videoId) {
+        if (state.player && typeof state.player.seekTo === 'function') {
+          state.player.seekTo(clip.startTime, true);
+          applyVolumeToActivePlayer();
+          if (autoplay && typeof state.player.playVideo === 'function') {
+            state.player.playVideo();
+            updatePlayPauseIcon(true);
+          }
+        } else {
+          initOrLoadYouTubePlayer(state.videoId, clip.startTime);
+        }
+      }
+
+      SpeakerReframer.applyToPreview(
+        framing.mode === 'manual' ? framing.panX : 0.5,
+        state.aspectRatio === '9:16',
+        framing.panY,
+        framing.zoom
+      );
+
+      startSegmentMonitor();
+    }
+
+    function startSegmentMonitor() {
+      if (state.segmentMonitorId) {
+        clearInterval(state.segmentMonitorId);
+      }
+
+      state.segmentMonitorId = setInterval(() => {
+        const clip = state.clips[state.activeClipIndex];
+        if (!clip) return;
+
+        let currentSec = clip.startTime;
+        let isPlaying = false;
+        const localVid = document.getElementById('local-video-player');
+        const bgBlurVid = document.getElementById('local-bg-blur-player');
+
+        if (state.sourceType === 'local' && localVid) {
+          currentSec = localVid.currentTime || clip.startTime;
+          isPlaying = !localVid.paused && !localVid.ended;
+          if (state.aspectRatio === 'fit-blur' && bgBlurVid && !bgBlurVid.classList.contains('hidden')) {
+            if (Math.abs((bgBlurVid.currentTime || 0) - currentSec) > 0.25) {
+              bgBlurVid.currentTime = currentSec;
+            }
+            if (isPlaying && bgBlurVid.paused) bgBlurVid.play().catch(() => {});
+            if (!isPlaying && !bgBlurVid.paused) bgBlurVid.pause();
+          }
+        } else if (state.player && typeof state.player.getCurrentTime === 'function') {
+          currentSec = state.player.getCurrentTime() || clip.startTime;
+          if (window.YT && typeof state.player.getPlayerState === 'function') {
+            isPlaying = state.player.getPlayerState() === YT.PlayerState.PLAYING;
+          }
+        }
+
+        if (isPlaying && currentSec >= clip.endTime - 0.12) {
+          if (state.loopClip) {
+            if (state.sourceType === 'local' && localVid) {
+              localVid.currentTime = clip.startTime;
+              if (bgBlurVid) bgBlurVid.currentTime = clip.startTime;
+            } else if (state.player && typeof state.player.seekTo === 'function') {
+              state.player.seekTo(clip.startTime, true);
+            }
+            currentSec = clip.startTime;
+          } else {
+            if (state.sourceType === 'local' && localVid) {
+              localVid.pause();
+              if (bgBlurVid) bgBlurVid.pause();
+            } else if (state.player && typeof state.player.pauseVideo === 'function') {
+              state.player.pauseVideo();
+            }
+            updatePlayPauseIcon(false);
+          }
+        }
+
+        const relElapsed = Math.min(clip.duration, Math.max(0, currentSec - clip.startTime));
+        const pct = clip.duration > 0 ? (relElapsed / clip.duration) * 100 : 0;
+
+        const curEl = document.getElementById('segment-current-time');
+        const barEl = document.getElementById('segment-progress-bar');
+        if (curEl) curEl.textContent = formatTime(relElapsed);
+        if (barEl) barEl.style.width = `${pct.toFixed(1)}%`;
+
+        if (Array.isArray(clip.captions) && clip.captions.length > 0) {
+          const activeCap =
+            clip.captions.find((c) => currentSec >= c.start && currentSec <= c.end) ||
+            clip.captions[0];
+          const capEl = document.getElementById('caption-text');
+          if (capEl && activeCap && capEl.textContent !== activeCap.text) {
+            capEl.textContent = activeCap.text;
+          }
+          const quickInput = document.getElementById('quick-caption-input');
+          if (quickInput && activeCap && document.activeElement !== quickInput) {
+            quickInput.value = activeCap.text;
+          }
+        }
+
+        SpeakerReframer.stepPreview(localVid, currentSec);
+      }, 150);
+    }
+
+    // =========================================================================
+    // 7. HANDLER FORM YOUTUBE & EKSPOR / UNDUH 1-KLIK
+    // =========================================================================
+    async function handleGenerateSubmit(e) {
+      if (e) e.preventDefault();
+
+      const urlInput = document.getElementById('youtube-url');
+      const rawUrl = (urlInput?.value || '').trim();
+      const videoId = extractYouTubeVideoId(rawUrl);
+
+      if (!videoId) {
+        showToast('Tempel link YouTube yang valid terlebih dahulu (atau klik Coba Contoh Link).', 'error');
+        urlInput?.focus();
+        return;
+      }
+
+      const genBtn = document.getElementById('generate-btn');
+      const statusBanner = document.getElementById('status-banner');
+      const statusMsg = document.getElementById('status-msg');
+      const statusSub = document.getElementById('status-sub');
+
+      if (genBtn) genBtn.disabled = true;
+      if (statusBanner) statusBanner.classList.remove('hidden');
+      if (statusMsg) statusMsg.textContent = 'Mengambil informasi video YouTube...';
+      if (statusSub) statusSub.textContent = 'Mendeteksi judul, durasi asli & momen terbaik';
+
+      state.sourceType = 'youtube';
+      state.videoId = videoId;
+      state.videoUrl = rawUrl;
+      state.topicFocus = (document.getElementById('topic-focus')?.value || '').trim();
+
+      const meta = await fetchYouTubeMetadata(videoId);
+      state.videoTitle = meta.title;
+      state.videoDuration = meta.duration;
+
+      if (statusMsg) statusMsg.textContent = `Membuat klip ${state.targetDuration} detik dengan AI...`;
+
+      state.clips = await generateViralClipsWithAI(
+        state.videoTitle,
+        state.videoDuration,
+        state.targetDuration,
+        state.topicFocus
+      );
+
+      if (genBtn) genBtn.disabled = false;
+      if (statusBanner) statusBanner.classList.add('hidden');
+
+      document.getElementById('empty-state')?.classList.add('hidden');
+      document.getElementById('workspace-section')?.classList.remove('hidden');
+      document.getElementById('batch-download-btn')?.classList.add('hidden');
+
+      const sourceBadge = document.getElementById('video-source-badge');
+      if (sourceBadge) {
+        sourceBadge.textContent = 'YouTube';
+        sourceBadge.className = 'px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-red-500/15 text-red-300 border border-red-500/30 shrink-0';
+      }
+      const titleDisplay = document.getElementById('video-title-display');
+      if (titleDisplay) titleDisplay.textContent = state.videoTitle;
+
+      const durBadge = document.getElementById('video-duration-badge');
+      if (durBadge) durBadge.textContent = `Durasi: ${formatTime(state.videoDuration)}`;
+
+      renderClipsList();
+      setAspectRatio(state.aspectRatio);
+      playClipSegment(0, true);
+      showToast(`Berhasil membuat ${state.clips.length} klip viral otomatis!`, 'success');
+    }
+
+    function openExportModal(clipIndex) {
+      if (!state.clips.length) {
+        showToast('Belum ada klip untuk diunduh.', 'error');
+        return;
+      }
+
+      currentExportClipIndex = Math.min(state.clips.length - 1, Math.max(0, clipIndex));
+      const clip = state.clips[currentExportClipIndex];
+
+      const modal = document.getElementById('export-modal');
+      const titleEl = document.getElementById('export-modal-title');
+      const subEl = document.getElementById('export-modal-sub');
+      const localOpts = document.getElementById('export-local-options');
+      const ytOpts = document.getElementById('export-youtube-options');
+
+      const resText =
+        state.aspectRatio === '9:16'
+          ? '1080×1920 (9:16 Crop)'
+          : state.aspectRatio === 'fit-blur'
+          ? '1080×1920 (9:16 Full + Blur BG)'
+          : '1920×1080 (16:9)';
+      if (titleEl) titleEl.textContent = `Unduh Klip #${currentExportClipIndex + 1}: ${clip.title}`;
+      if (subEl) subEl.textContent = `Resolusi ${resText} • Durasi ${clip.duration} Detik • Subtitle TikTok`;
+
+      ClipExporter.updateProgress(0, 'Siap merender klip...', 'Mempersiapkan kanvas HD & trek audio...');
+      document.getElementById('export-preview-box')?.classList.add('hidden');
+      const resVid = document.getElementById('export-result-video');
+      if (resVid) {
+        resVid.pause();
+        resVid.removeAttribute('src');
+        resVid.load();
+      }
+      modal?.classList.remove('hidden');
+
+      if (state.sourceType === 'local' && state.localVideoUrl) {
+        localOpts?.classList.remove('hidden');
+        ytOpts?.classList.add('hidden');
+        setTimeout(() => {
+          ClipExporter.renderFromLocalFile(currentExportClipIndex);
+        }, 120);
+      } else {
+        localOpts?.classList.add('hidden');
+        ytOpts?.classList.remove('hidden');
+      }
+    }
+
+    const ClipExporter = {
+      active: false,
+      cancelled: false,
+      mediaRecorder: null,
+      chunks: [],
+      rafId: null,
+      renderLoopId: null,
+      timerId: null,
+      offscreenVid: null,
+      stream: null,
+      audioCtx: null,
+      lastExportBlob: null,
+      lastExportFilename: '',
+      lastPreviewUrl: null,
+
+      updateProgress(percent, statusText, detailText = '') {
+        const clamped = Math.min(100, Math.max(0, Number(percent) || 0));
+        const bar = document.getElementById('export-progress-bar');
+        const pctEl = document.getElementById('export-percent-text');
+        const statusEl = document.getElementById('export-status-text');
+        const detailEl = document.getElementById('export-detail-text');
+
+        if (bar) bar.style.width = `${clamped.toFixed(1)}%`;
+        if (pctEl) pctEl.textContent = `${Math.round(clamped)}%`;
+        if (statusEl && statusText) statusEl.textContent = statusText;
+        if (detailEl && detailText) detailEl.textContent = detailText;
+      },
+
+      triggerDownload(blob, filename) {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename || 'KlipKilat_Video.mp4';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          a.remove();
+          URL.revokeObjectURL(url);
+        }, 4000);
+      },
+
+      presentRenderedResult(blob, filename) {
+        if (!blob) return;
+        this.lastExportBlob = blob;
+        this.lastExportFilename = filename;
+
+        if (this.lastPreviewUrl) {
+          try { URL.revokeObjectURL(this.lastPreviewUrl); } catch (e) {}
+          this.lastPreviewUrl = null;
+        }
+
+        const previewBox = document.getElementById('export-preview-box');
+        const previewVid = document.getElementById('export-result-video');
+        const metaEl = document.getElementById('export-file-meta');
+
+        const ext = filename.toLowerCase().endsWith('.mp4') ? 'MP4' : 'WEBM';
+        const sizeMb = (blob.size / (1024 * 1024)).toFixed(2);
+        if (metaEl) {
+          metaEl.textContent = `${ext} • ${sizeMb} MB`;
+        }
+
+        if (previewVid) {
+          this.lastPreviewUrl = URL.createObjectURL(blob);
+          previewVid.src = this.lastPreviewUrl;
+          previewVid.load();
+        }
+        previewBox?.classList.remove('hidden');
+
+        this.triggerDownload(blob, filename);
+      },
+
+      wrapTextLines(ctx, text, maxWidth) {
+        const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+        if (words.length === 0) return [];
+        const lines = [];
+        let current = words[0];
+        for (let i = 1; i < words.length; i++) {
+          const testLine = `${current} ${words[i]}`;
+          if (ctx.measureText(testLine).width <= maxWidth) {
+            current = testLine;
+          } else {
+            lines.push(current);
+            current = words[i];
+          }
+        }
+        lines.push(current);
+        return lines;
+      },
+
+      drawSubtitleOverlay(ctx, outW, outH, captionText, progressRatio = 0) {
+        const clampedRatio = Math.min(1, Math.max(0, Number(progressRatio) || 0));
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+        ctx.fillRect(0, outH - 12, outW, 12);
+        ctx.fillStyle = '#a855f7';
+        ctx.fillRect(0, outH - 12, outW * clampedRatio, 12);
+        ctx.restore();
+
+        if (!state.showCaptions) return;
+        const cleanText = String(captionText || '').trim().toUpperCase();
+        if (!cleanText) return;
+
+        ctx.save();
+        const isVertical = outH > outW;
+        const fontSize = isVertical ? 54 : 44;
+        const lineHeight = Math.round(fontSize * 1.24);
+        const maxWidth = outW * 0.84;
+
+        ctx.font = `900 ${fontSize}px Inter, system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const lines = this.wrapTextLines(ctx, cleanText, maxWidth).slice(0, 3);
+        const totalHeight = lines.length * lineHeight;
+        const baseY = (isVertical ? outH * 0.79 : outH * 0.84) - totalHeight / 2;
+
+        let widest = 0;
+        for (const line of lines) {
+          widest = Math.max(widest, ctx.measureText(line).width);
+        }
+        const padX = 28;
+        const padY = 16;
+        const boxW = Math.min(outW * 0.92, widest + padX * 2);
+        const boxH = totalHeight + padY * 2;
+        const boxX = (outW - boxW) / 2;
+        const boxY = baseY - lineHeight / 2 - padY;
+
+        ctx.fillStyle = 'rgba(9, 9, 11, 0.58)';
+        ctx.beginPath();
+        ctx.roundRect(boxX, boxY, boxW, boxH, 20);
+        ctx.fill();
+
+        const fillColor =
+          state.captionTheme === 'yellow'
+            ? '#facc15'
+            : state.captionTheme === 'neon'
+            ? '#e9d5ff'
+            : '#ffffff';
+
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 8;
+        ctx.strokeStyle = '#000000';
+        ctx.fillStyle = fillColor;
+
+        if (state.captionTheme === 'neon') {
+          ctx.shadowColor = 'rgba(168, 85, 247, 0.95)';
+          ctx.shadowBlur = 18;
+        }
+
+        lines.forEach((line, i) => {
+          const y = baseY + i * lineHeight;
+          ctx.strokeText(line, outW / 2, y);
+          ctx.fillText(line, outW / 2, y);
+        });
+        ctx.restore();
+      },
+
+      getSupportedMimeType(withAudio = true) {
+        if (!window.MediaRecorder) return '';
+        const typesWithAudio = [
+          'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+          'video/mp4;codecs=avc1,mp4a.40.2',
+          'video/mp4',
+          'video/webm;codecs=vp8,opus',
+          'video/webm;codecs=vp9,opus',
+          'video/webm'
+        ];
+        const typesVideoOnly = [
+          'video/mp4;codecs=avc1.42E01E',
+          'video/mp4;codecs=avc1',
+          'video/mp4',
+          'video/webm;codecs=vp8',
+          'video/webm;codecs=vp9',
+          'video/webm'
+        ];
+        const list = withAudio ? typesWithAudio : typesVideoOnly;
+        for (const t of list) {
+          if (MediaRecorder.isTypeSupported(t)) return t;
+        }
+        return '';
+      },
+
+      createKeepAliveAudioStream() {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioContextClass();
+        const dest = ctx.createMediaStreamDestination();
+        const osc = ctx.createOscillator();
+        const silentGain = ctx.createGain();
+        silentGain.gain.value = 0.00005;
+        osc.frequency.value = 60;
+        osc.connect(silentGain);
+        silentGain.connect(dest);
+        osc.start();
+        return { ctx, dest, osc };
+      },
+
+      async renderFromLocalFile(clipIndex, onBatchDone = null) {
+        const clip = state.clips[clipIndex];
+        if (!clip || !state.localVideoUrl) return;
+
+        this.cancel();
+        this.active = true;
+        this.cancelled = false;
+        this.chunks = [];
+        document.getElementById('export-preview-box')?.classList.add('hidden');
+
+        const isPortrait = state.aspectRatio === '9:16' || state.aspectRatio === 'fit-blur';
+        const isFitBlur = state.aspectRatio === 'fit-blur';
+        const outW = isPortrait ? 1080 : 1920;
+        const outH = isPortrait ? 1920 : 1080;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = outW;
+        canvas.height = outH;
+        const ctx = canvas.getContext('2d', { alpha: false });
+
+        const hiddenVid = document.createElement('video');
+        hiddenVid.src = state.localVideoUrl;
+        hiddenVid.playsInline = true;
+        hiddenVid.preload = 'auto';
+        hiddenVid.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:4px;height:4px;opacity:0.01;pointer-events:none;';
+        document.body.appendChild(hiddenVid);
+        this.offscreenVid = hiddenVid;
+
+        this.updateProgress(5, 'Menyiapkan video asli...', 'Memuat frame & trek audio pembicara');
+
+        await new Promise((resolve) => {
+          if (hiddenVid.readyState >= 1) return resolve();
+          hiddenVid.onloadedmetadata = resolve;
+          hiddenVid.onerror = resolve;
+          setTimeout(resolve, 4000);
+        });
+
+        hiddenVid.currentTime = clip.startTime;
+        await new Promise((resolve) => {
+          hiddenVid.onseeked = resolve;
+          setTimeout(resolve, 2500);
+        });
+
+        const canvasStream = canvas.captureStream(30);
+        let hasAudioTrack = false;
+        try {
+          const { ctx: aCtx, dest: destNode } = this.createKeepAliveAudioStream();
+          this.audioCtx = aCtx;
+          if (this.audioCtx.state === 'suspended') {
+            await this.audioCtx.resume();
+          }
+          const sourceNode = this.audioCtx.createMediaElementSource(hiddenVid);
+          sourceNode.connect(destNode);
+          destNode.stream.getAudioTracks().forEach((track) => {
+            canvasStream.addTrack(track);
+            hasAudioTrack = true;
+          });
+        } catch (e) {
+          hasAudioTrack = false;
+        }
+
+        const framing = SpeakerReframer.ensureClipFraming(clip);
+        const tracker = {
+          panX: framing.panX ?? 0.5,
+          velX: 0,
+          prevFrame: null,
+          scanCanvas: document.createElement('canvas'),
+          scanCtx: null
+        };
+        tracker.scanCanvas.width = 64;
+        tracker.scanCanvas.height = 36;
+        tracker.scanCtx = tracker.scanCanvas.getContext('2d', { willReadFrequently: true });
+
+        const paintCurrentVideoFrame = () => {
+          const cur = hiddenVid.currentTime || clip.startTime;
+          const elapsed = Math.max(0, cur - clip.startTime);
+
+          let panX = framing.panX ?? 0.5;
+          const panY = framing.panY ?? 0.5;
+          const zoom = framing.zoom ?? 1.05;
+
+          if (framing.mode !== 'manual' && state.reframeEnabled) {
+            const mode = framing.mode || state.reframeMode || 'auto';
+            if (mode === 'auto') {
+              panX = SpeakerReframer.analyzeVideoFrameSpeaker(hiddenVid, tracker, 0.033);
+            } else {
+              panX = SpeakerReframer.computeSimulatedSpeakerX(mode, elapsed, clipIndex + 1);
+            }
+          }
+
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(0, 0, outW, outH);
+
+          const vw = hiddenVid.videoWidth || 1280;
+          const vh = hiddenVid.videoHeight || 720;
+
+          if (hiddenVid.readyState >= 2) {
+            if (isFitBlur) {
+              if (state.portraitBgStyle === 'gradient-purple') {
+                const bgGrad = ctx.createLinearGradient(0, 0, 0, outH);
+                bgGrad.addColorStop(0, '#2e1065');
+                bgGrad.addColorStop(0.5, '#09090b');
+                bgGrad.addColorStop(1, '#1e1b4b');
+                ctx.fillStyle = bgGrad;
+                ctx.fillRect(0, 0, outW, outH);
+              } else {
+                const isDarkBlur = state.portraitBgStyle === 'blur-dark';
+                const bgScale = Math.max(outW / vw, outH / vh) * 1.14;
+                const bgW = vw * bgScale;
+                const bgH = vh * bgScale;
+                ctx.save();
+                ctx.filter = isDarkBlur
+                  ? 'blur(34px) brightness(0.45) saturate(1.15)'
+                  : 'blur(26px) brightness(0.68) saturate(1.3)';
+                ctx.drawImage(hiddenVid, (outW - bgW) / 2, (outH - bgH) / 2, bgW, bgH);
+                ctx.restore();
+
+                ctx.fillStyle = isDarkBlur ? 'rgba(0, 0, 0, 0.35)' : 'rgba(0, 0, 0, 0.22)';
+                ctx.fillRect(0, 0, outW, outH);
+              }
+
+              const fgScale = Math.min(outW / vw, outH / vh);
+              const fgW = vw * fgScale;
+              const fgH = vh * fgScale;
+              const fgX = (outW - fgW) / 2;
+              const fgY = (outH - fgH) * panY;
+
+              ctx.save();
+              ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+              ctx.shadowBlur = 36;
+              ctx.shadowOffsetY = 12;
+              ctx.drawImage(hiddenVid, fgX, fgY, fgW, fgH);
+              ctx.restore();
+            } else if (isPortrait) {
+              const baseScale = outH / vh;
+              const totalScale = baseScale * zoom;
+              const drawW = vw * totalScale;
+              const drawH = vh * totalScale;
+              const maxOffsetX = Math.max(0, drawW - outW);
+              const maxOffsetY = Math.max(0, drawH - outH);
+              const dx = -panX * maxOffsetX;
+              const dy = -panY * maxOffsetY;
+              ctx.drawImage(hiddenVid, dx, dy, drawW, drawH);
+            } else {
+              const scale = Math.min(outW / vw, outH / vh);
+              const drawW = vw * scale;
+              const drawH = vh * scale;
+              ctx.drawImage(hiddenVid, (outW - drawW) / 2, (outH - drawH) / 2, drawW, drawH);
+            }
+          }
+
+          const activeCap =
+            clip.captions?.find((c) => cur >= c.start && cur <= c.end) ||
+            clip.captions?.[0];
+          this.drawSubtitleOverlay(ctx, outW, outH, activeCap?.text || '', elapsed / clip.duration);
+          return { cur, elapsed };
+        };
+
+        paintCurrentVideoFrame();
+
+        const preferredMime = this.getSupportedMimeType(hasAudioTrack);
+        try {
+          this.mediaRecorder = preferredMime
+            ? new MediaRecorder(canvasStream, { mimeType: preferredMime, videoBitsPerSecond: 4500000 })
+            : new MediaRecorder(canvasStream);
+        } catch (err) {
+          this.mediaRecorder = new MediaRecorder(canvasStream);
+        }
+
+        const actualMime = this.mediaRecorder.mimeType || preferredMime || 'video/webm';
+
+        this.mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) this.chunks.push(e.data);
+        };
+
+        this.mediaRecorder.onstop = () => {
+          const wasCancelled = this.cancelled;
+          const recordedChunks = [...this.chunks];
+          this.cleanupResources();
+
+          if (!wasCancelled) {
+            const blob = new Blob(recordedChunks, { type: actualMime });
+            if (blob.size < 2048) {
+              this.updateProgress(0, 'Gagal merender frame video.', 'Pastikan file video tidak rusak dan coba kembali.');
+              showToast('Hasil render terlalu kecil/kosong. Silakan coba render ulang.', 'error');
+            } else {
+              const ext = actualMime.includes('mp4') ? 'mp4' : 'webm';
+              const safeName = state.videoTitle.replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 30);
+              const filename = `${safeName}_Klip${clipIndex + 1}_${clip.duration}s.${ext}`;
+              this.presentRenderedResult(blob, filename);
+              this.updateProgress(100, `Selesai! Format ${ext.toUpperCase()} valid & siap diputar.`, 'Video otomatis terunduh atau putar pratinjau di bawah.');
+              showToast(`Klip #${clipIndex + 1} (${ext.toUpperCase()}) berhasil diunduh!`, 'success');
+            }
+          }
+          if (typeof onBatchDone === 'function') {
+            onBatchDone();
+          }
+        };
+
+        this.mediaRecorder.start(250);
+        await hiddenVid.play().catch(() => {});
+
+        let stopping = false;
+        const stopSafely = () => {
+          if (stopping) return;
+          stopping = true;
+          hiddenVid.pause();
+          if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+            try { this.mediaRecorder.requestData(); } catch (e) {}
+            setTimeout(() => {
+              if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+                this.mediaRecorder.stop();
+              }
+            }, 120);
+          }
+        };
+
+        this.renderLoopId = setInterval(() => {
+          if (this.cancelled || !this.active || stopping) return;
+
+          const { cur, elapsed } = paintCurrentVideoFrame();
+          const pct = Math.min(99, (elapsed / clip.duration) * 100);
+
+          this.updateProgress(
+            pct,
+            `Merender Klip #${clipIndex + 1} (${formatTime(elapsed)} / ${formatTime(clip.duration)})...`,
+            'Auto-Reframe aktif • Mengenkode video & audio valid'
+          );
+
+          if (cur >= clip.endTime - 0.05 || hiddenVid.ended) {
+            stopSafely();
+          }
+        }, 1000 / 30);
+      },
+
+      async recordLiveTabSegment(clipIndex) {
+        const clip = state.clips[clipIndex];
+        if (!clip) return;
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+          showToast('Browser Anda tidak mendukung rekam tab. Gunakan Opsi 2 (Render Instan).', 'error');
+          return;
+        }
+
+        try {
+          const displayStream = await navigator.mediaDevices.getDisplayMedia({
+            video: { frameRate: 30 },
+            audio: true,
+            preferCurrentTab: true
+          });
+
+          this.cancel();
+          this.active = true;
+          this.cancelled = false;
+          this.chunks = [];
+          this.stream = displayStream;
+
+          document.getElementById('export-modal')?.classList.add('hidden');
+          const hud = document.getElementById('live-capture-hud');
+          const hudTimer = document.getElementById('live-hud-timer');
+          hud?.classList.remove('hidden');
+
+          document.getElementById('overlay-top-badge')?.classList.add('hidden');
+          document.getElementById('reframe-hud-badge')?.classList.add('hidden');
+
+          const captureVid = document.createElement('video');
+          captureVid.srcObject = displayStream;
+          captureVid.muted = true;
+          captureVid.playsInline = true;
+          captureVid.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:4px;height:4px;opacity:0.01;pointer-events:none;';
+          document.body.appendChild(captureVid);
+          this.offscreenVid = captureVid;
+          await captureVid.play();
+
+          const isPortrait = state.aspectRatio === '9:16' || state.aspectRatio === 'fit-blur';
+          const outW = isPortrait ? 1080 : 1920;
+          const outH = isPortrait ? 1920 : 1080;
+          const canvas = document.createElement('canvas');
+          canvas.width = outW;
+          canvas.height = outH;
+          const ctx = canvas.getContext('2d', { alpha: false });
+
+          const outStream = canvas.captureStream(30);
+          const tabAudioTracks = displayStream.getAudioTracks();
+          let hasAudio = false;
+          if (tabAudioTracks.length > 0) {
+            tabAudioTracks.forEach((t) => {
+              outStream.addTrack(t);
+              hasAudio = true;
+            });
+          } else {
+            try {
+              const { ctx: aCtx, dest } = this.createKeepAliveAudioStream();
+              this.audioCtx = aCtx;
+              if (this.audioCtx.state === 'suspended') await this.audioCtx.resume();
+              dest.stream.getAudioTracks().forEach((t) => {
+                outStream.addTrack(t);
+                hasAudio = true;
+              });
+            } catch (e) {}
+          }
+
+          const container = document.getElementById('aspect-container');
+          const drawTabFrame = () => {
+            const vw = captureVid.videoWidth || window.innerWidth;
+            const vh = captureVid.videoHeight || window.innerHeight;
+            const rect = container?.getBoundingClientRect();
+
+            if (captureVid.readyState >= 2 && rect && rect.width > 50 && rect.height > 50) {
+              const scaleX = vw / window.innerWidth;
+              const scaleY = vh / window.innerHeight;
+              const sx = Math.max(0, rect.left * scaleX);
+              const sy = Math.max(0, rect.top * scaleY);
+              const sw = Math.min(vw - sx, rect.width * scaleX);
+              const sh = Math.min(vh - sy, rect.height * scaleY);
+              ctx.drawImage(captureVid, sx, sy, sw, sh, 0, 0, outW, outH);
+            } else if (captureVid.readyState >= 2) {
+              ctx.drawImage(captureVid, 0, 0, outW, outH);
+            }
+          };
+
+          drawTabFrame();
+
+          const preferredMime = this.getSupportedMimeType(hasAudio);
+          try {
+            this.mediaRecorder = preferredMime
+              ? new MediaRecorder(outStream, { mimeType: preferredMime, videoBitsPerSecond: 4500000 })
+              : new MediaRecorder(outStream);
+          } catch (e) {
+            this.mediaRecorder = new MediaRecorder(outStream);
+          }
+          const actualMime = this.mediaRecorder.mimeType || preferredMime || 'video/webm';
+
+          this.mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) this.chunks.push(e.data);
+          };
+
+          this.mediaRecorder.onstop = () => {
+            const wasCancelled = this.cancelled;
+            const recordedChunks = [...this.chunks];
+            this.cleanupResources();
+            hud?.classList.add('hidden');
+            document.getElementById('overlay-top-badge')?.classList.remove('hidden');
+
+            if (!wasCancelled && recordedChunks.length > 0) {
+              const blob = new Blob(recordedChunks, { type: actualMime });
+              if (blob.size >= 2048) {
+                const ext = actualMime.includes('mp4') ? 'mp4' : 'webm';
+                const filename = `KlipKilat_YouTube_Klip${clipIndex + 1}_${clip.duration}s.${ext}`;
+                document.getElementById('export-modal')?.classList.remove('hidden');
+                this.presentRenderedResult(blob, filename);
+                this.updateProgress(100, `Video asli (${ext.toUpperCase()}) berhasil direkam!`, 'Putar pratinjau di bawah untuk memastikan kualitas.');
+                showToast(`Video asli Klip #${clipIndex + 1} berhasil direkam & diunduh!`, 'success');
+              } else {
+                showToast('Rekaman terlalu singkat atau kosong.', 'error');
+              }
+            }
+          };
+
+          displayStream.getVideoTracks()[0].onended = () => {
+            this.finishEarly();
+          };
+
+          state.isMuted = false;
+          if (state.volume === 0) state.volume = 100;
+          updateVolumeUI();
+          playClipSegment(clipIndex, true);
+
+          this.mediaRecorder.start(250);
+          const startTimeMs = performance.now();
+          const targetMs = clip.duration * 1000;
+
+          this.renderLoopId = setInterval(() => {
+            if (this.cancelled || !this.active) return;
+
+            const elapsedMs = performance.now() - startTimeMs;
+            const elapsedSec = elapsedMs / 1000;
+            if (hudTimer) {
+              hudTimer.textContent = `${formatTime(elapsedSec)} / ${formatTime(clip.duration)}`;
+            }
+
+            drawTabFrame();
+
+            if (elapsedMs >= targetMs) {
+              this.finishEarly();
+            }
+          }, 1000 / 30);
+        } catch (err) {
+          showToast('Perekaman tab dibatalkan atau izin tidak diberikan.', 'error');
+        }
+      },
+
+      async renderInstantStudioClip(clipIndex) {
+        const clip = state.clips[clipIndex];
+        if (!clip) return;
+
+        this.cancel();
+        this.active = true;
+        this.cancelled = false;
+        this.chunks = [];
+        document.getElementById('export-preview-box')?.classList.add('hidden');
+
+        const speed = Number(document.getElementById('export-speed-select')?.value || 3);
+        const audioStyle = document.getElementById('export-audio-select')?.value || 'chill';
+
+        const isPortrait = state.aspectRatio === '9:16' || state.aspectRatio === 'fit-blur';
+        const isFitBlur = state.aspectRatio === 'fit-blur';
+        const outW = isPortrait ? 1080 : 1920;
+        const outH = isPortrait ? 1920 : 1080;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = outW;
+        canvas.height = outH;
+        const ctx = canvas.getContext('2d', { alpha: false });
+
+        const thumbImg = new Image();
+        thumbImg.crossOrigin = 'anonymous';
+        if (state.videoId) {
+          thumbImg.src = `https://i.ytimg.com/vi/${state.videoId}/hqdefault.jpg`;
+          await new Promise((resolve) => {
+            thumbImg.onload = resolve;
+            thumbImg.onerror = resolve;
+            setTimeout(resolve, 2000);
+          });
+        }
+
+        const canvasStream = canvas.captureStream(30);
+        let hasAudio = false;
+        try {
+          const { ctx: aCtx, dest } = this.createKeepAliveAudioStream();
+          this.audioCtx = aCtx;
+          if (this.audioCtx.state === 'suspended') {
+            await this.audioCtx.resume();
+          }
+          const masterGain = this.audioCtx.createGain();
+          masterGain.gain.value = 0.14;
+          masterGain.connect(dest);
+
+          const chords =
+            audioStyle === 'energetic'
+              ? [261.63, 329.63, 392.0, 523.25]
+              : [220.0, 261.63, 329.63, 392.0];
+          let step = 0;
+          this.timerId = setInterval(() => {
+            if (!this.audioCtx || this.cancelled) return;
+            const osc = this.audioCtx.createOscillator();
+            const noteGain = this.audioCtx.createGain();
+            osc.type = audioStyle === 'energetic' ? 'triangle' : 'sine';
+            osc.frequency.value = chords[step % chords.length];
+            noteGain.gain.setValueAtTime(0.001, this.audioCtx.currentTime);
+            noteGain.gain.exponentialRampToValueAtTime(0.25, this.audioCtx.currentTime + 0.05);
+            noteGain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.45);
+            osc.connect(noteGain);
+            noteGain.connect(masterGain);
+            osc.start();
+            osc.stop(this.audioCtx.currentTime + 0.48);
+            step++;
+          }, audioStyle === 'energetic' ? 350 : 550);
+
+          dest.stream.getAudioTracks().forEach((t) => {
+            canvasStream.addTrack(t);
+            hasAudio = true;
+          });
+        } catch (e) {}
+
+        const framing = SpeakerReframer.ensureClipFraming(clip);
+        const drawStudioFrame = (ratio) => {
+          const simElapsed = ratio * clip.duration;
+          const simAbsSec = clip.startTime + simElapsed;
+
+          const grad = ctx.createLinearGradient(0, 0, outW, outH);
+          grad.addColorStop(0, '#18181b');
+          grad.addColorStop(1, '#09090b');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, outW, outH);
+
+          const panX =
+            framing.mode === 'manual'
+              ? framing.panX
+              : SpeakerReframer.computeSimulatedSpeakerX(framing.mode || 'auto', simElapsed, clipIndex + 1);
+          const zoom = (framing.zoom || 1.05) + ratio * 0.08;
+
+          if (thumbImg.complete && thumbImg.naturalWidth > 0) {
+            const iw = thumbImg.naturalWidth;
+            const ih = thumbImg.naturalHeight;
+            if (isFitBlur) {
+              if (state.portraitBgStyle === 'gradient-purple') {
+                const bgGrad = ctx.createLinearGradient(0, 0, 0, outH);
+                bgGrad.addColorStop(0, '#2e1065');
+                bgGrad.addColorStop(0.5, '#09090b');
+                bgGrad.addColorStop(1, '#1e1b4b');
+                ctx.fillStyle = bgGrad;
+                ctx.fillRect(0, 0, outW, outH);
+              } else {
+                const bgScale = Math.max(outW / iw, outH / ih) * 1.15;
+                const bgW = iw * bgScale;
+                const bgH = ih * bgScale;
+                ctx.save();
+                ctx.filter = 'blur(28px) brightness(0.55) saturate(1.3)';
+                ctx.drawImage(thumbImg, (outW - bgW) / 2, (outH - bgH) / 2, bgW, bgH);
+                ctx.restore();
+              }
+              const fgScale = Math.min(outW / iw, outH / ih);
+              const fgW = iw * fgScale;
+              const fgH = ih * fgScale;
+              ctx.save();
+              ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+              ctx.shadowBlur = 34;
+              ctx.drawImage(thumbImg, (outW - fgW) / 2, (outH - fgH) / 2, fgW, fgH);
+              ctx.restore();
+            } else {
+              const scale = Math.max(outW / iw, outH / ih) * zoom;
+              const dw = iw * scale;
+              const dh = ih * scale;
+              const dx = -panX * Math.max(0, dw - outW);
+              const dy = -(framing.panY ?? 0.5) * Math.max(0, dh - outH);
+              ctx.drawImage(thumbImg, dx, dy, dw, dh);
+            }
+          }
+
+          if (!isFitBlur) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+            ctx.fillRect(0, 0, outW, outH);
+          }
+
+          ctx.fillStyle = 'rgba(168, 85, 247, 0.92)';
+          ctx.beginPath();
+          ctx.roundRect(outW / 2 - 150, 90, 300, 48, 24);
+          ctx.fill();
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '800 22px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`KLIP VIRAL #${clipIndex + 1} • SKOR ${clip.score}`, outW / 2, 121);
+
+          if (!isFitBlur) {
+            const bars = 24;
+            const barW = 10;
+            const gap = 8;
+            const totalBarW = bars * (barW + gap);
+            const startBarX = (outW - totalBarW) / 2;
+            const baseBarY = isPortrait ? outH * 0.52 : outH * 0.56;
+            for (let b = 0; b < bars; b++) {
+              const amp = 18 + Math.abs(Math.sin(simElapsed * 7 + b * 0.6)) * 55;
+              ctx.fillStyle = b % 2 === 0 ? '#c084fc' : '#818cf8';
+              ctx.beginPath();
+              ctx.roundRect(startBarX + b * (barW + gap), baseBarY - amp / 2, barW, amp, 6);
+              ctx.fill();
+            }
+          }
+
+          const activeCap =
+            clip.captions?.find((c) => simAbsSec >= c.start && simAbsSec <= c.end) ||
+            clip.captions?.[0];
+          this.drawSubtitleOverlay(ctx, outW, outH, activeCap?.text || '', ratio);
+        };
+
+        drawStudioFrame(0);
+
+        const preferredMime = this.getSupportedMimeType(hasAudio);
+        try {
+          this.mediaRecorder = preferredMime
+            ? new MediaRecorder(canvasStream, { mimeType: preferredMime, videoBitsPerSecond: 4000000 })
+            : new MediaRecorder(canvasStream);
+        } catch (e) {
+          this.mediaRecorder = new MediaRecorder(canvasStream);
+        }
+        const actualMime = this.mediaRecorder.mimeType || preferredMime || 'video/webm';
+
+        this.mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) this.chunks.push(e.data);
+        };
+
+        this.mediaRecorder.onstop = () => {
+          const wasCancelled = this.cancelled;
+          const recordedChunks = [...this.chunks];
+          this.cleanupResources();
+
+          if (!wasCancelled && recordedChunks.length > 0) {
+            const blob = new Blob(recordedChunks, { type: actualMime });
+            if (blob.size >= 2048) {
+              const ext = actualMime.includes('mp4') ? 'mp4' : 'webm';
+              const filename = `KlipKilat_Instan_Klip${clipIndex + 1}_${clip.duration}s.${ext}`;
+              this.presentRenderedResult(blob, filename);
+              this.updateProgress(100, `Render instan (${ext.toUpperCase()}) selesai!`, 'Video siap diputar atau diunduh ulang.');
+              showToast(`Klip #${clipIndex + 1} (${ext.toUpperCase()}) berhasil dirender!`, 'success');
+            } else {
+              showToast('Hasil render kosong, silakan coba kembali.', 'error');
+            }
+          }
+        };
+
+        this.mediaRecorder.start(250);
+        const renderDurationMs = (clip.duration * 1000) / Math.max(1, speed);
+        const startTimeMs = performance.now();
+        let stopping = false;
+
+        this.renderLoopId = setInterval(() => {
+          if (this.cancelled || !this.active || stopping) return;
+
+          const elapsedMs = performance.now() - startTimeMs;
+          const ratio = Math.min(1, elapsedMs / renderDurationMs);
+          drawStudioFrame(ratio);
+
+          this.updateProgress(
+            ratio * 99,
+            `Merender Klip #${clipIndex + 1} (${Math.round(ratio * 100)}%)...`,
+            `Kecepatan ${speed}x • Mengenkode video HD & audio studio`
+          );
+
+          if (ratio >= 1) {
+            stopping = true;
+            if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+              try { this.mediaRecorder.requestData(); } catch (e) {}
+              setTimeout(() => {
+                if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+                  this.mediaRecorder.stop();
+                }
+              }, 120);
+            }
+          }
+        }, 1000 / 30);
+      },
+
+      finishEarly() {
+        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+          try { this.mediaRecorder.requestData(); } catch (e) {}
+          setTimeout(() => {
+            if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+              this.mediaRecorder.stop();
+            }
+          }, 120);
+        } else {
+          this.cleanupResources();
+        }
+      },
+
+      cancel() {
+        this.cancelled = true;
+        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+          try { this.mediaRecorder.stop(); } catch (e) {}
+        }
+        this.cleanupResources();
+      },
+
+      cleanupResources() {
+        this.active = false;
+        if (this.rafId) {
+          cancelAnimationFrame(this.rafId);
+          this.rafId = null;
+        }
+        if (this.renderLoopId) {
+          clearInterval(this.renderLoopId);
+          this.renderLoopId = null;
+        }
+        if (this.timerId) {
+          clearInterval(this.timerId);
+          this.timerId = null;
+        }
+        if (this.offscreenVid) {
+          try {
+            this.offscreenVid.pause();
+            this.offscreenVid.removeAttribute('src');
+            this.offscreenVid.remove();
+          } catch (e) {}
+          this.offscreenVid = null;
+        }
+        if (this.stream) {
+          this.stream.getTracks().forEach((t) => t.stop());
+          this.stream = null;
+        }
+        if (this.audioCtx) {
+          try { this.audioCtx.close(); } catch (e) {}
+          this.audioCtx = null;
+        }
+      }
+    };
+
+    function startBatchLocalExport() {
+      if (state.sourceType !== 'local' || !state.clips.length) return;
+      let idx = 0;
+      const modal = document.getElementById('export-modal');
+      document.getElementById('export-local-options')?.classList.remove('hidden');
+      document.getElementById('export-youtube-options')?.classList.add('hidden');
+      modal?.classList.remove('hidden');
+
+      const nextClip = () => {
+        if (idx >= state.clips.length) {
+          showToast(`Semua ${state.clips.length} klip selesai diunduh otomatis!`, 'success');
+          return;
+        }
+        const curIdx = idx++;
+        ClipExporter.renderFromLocalFile(curIdx, () => {
+          if (!ClipExporter.cancelled && idx < state.clips.length) {
+            setTimeout(nextClip, 600);
+          }
+        });
+      };
+      nextClip();
+    }
+
+    function downloadClipSrt(clipIndex) {
+      const clip = state.clips[clipIndex];
+      if (!clip) return;
+
+      const lines = (clip.captions || []).map((cap, idx) => {
+        const relStart = Math.max(0, cap.start - clip.startTime);
+        const relEnd = Math.max(relStart + 0.5, cap.end - clip.startTime);
+        return `${idx + 1}\n${formatSrtTime(relStart)} --> ${formatSrtTime(relEnd)}\n${cap.text}\n`;
+      });
+
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+      ClipExporter.triggerDownload(blob, `KlipKilat_Klip${clipIndex + 1}.srt`);
+      showToast(`File subtitle Klip #${clipIndex + 1} (.SRT) berhasil diunduh!`, 'success');
+    }
+
+    function buildFfmpegCommandText(clipIndex) {
+      const clip = state.clips[clipIndex] || state.clips[0];
+      if (!clip) return '';
+      const url = state.videoUrl || `https://www.youtube.com/watch?v=${state.videoId || 'VIDEO_ID'}`;
+      let cropFilter = `-vf "scale=1920:1080"`;
+      if (state.aspectRatio === '9:16') {
+        cropFilter = `-vf "crop=ih*9/16:ih,scale=1080:1920"`;
+      } else if (state.aspectRatio === 'fit-blur') {
+        cropFilter = `-filter_complex "[0:v]split[bg][fg];[bg]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=25:5[bgb];[fg]scale=1080:-2[fgb];[bgb][fgb]overlay=(W-w)/2:(H-h)/2"`;
+      }
+      return `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]" --download-sections "*${formatTime(clip.startTime)}-${formatTime(clip.endTime)}" "${url}" -o "klip_${clipIndex + 1}_raw.mp4" && ffmpeg -y -i "klip_${clipIndex + 1}_raw.mp4" ${cropFilter} -c:v libx264 -crf 20 -c:a aac "KlipKilat_Klip${clipIndex + 1}.mp4"`;
+    }
+
+    function copyFfmpegCommand(clipIndex) {
+      const cmd = buildFfmpegCommandText(clipIndex);
+      if (!cmd) return;
+      const ta = document.createElement('textarea');
+      ta.value = cmd;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      showToast('Perintah yt-dlp + FFmpeg berhasil disalin ke clipboard!', 'success');
+    }
+
+    function downloadTerminalScript() {
+      const cmd = buildFfmpegCommandText(currentExportClipIndex);
+      if (!cmd) return;
+      const isWin = navigator.platform.toLowerCase().includes('win');
+      const content = isWin
+        ? `@echo off\necho Mengunduh dan memotong klip dengan yt-dlp & FFmpeg...\n${cmd}\npause\n`
+        : `#!/bin/bash\necho "Mengunduh dan memotong klip dengan yt-dlp & FFmpeg..."\n${cmd}\n`;
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      ClipExporter.triggerDownload(blob, isWin ? `potong_klip_${currentExportClipIndex + 1}.bat` : `potong_klip_${currentExportClipIndex + 1}.sh`);
+      showToast('Skrip terminal siap pakai berhasil diunduh!', 'success');
+    }
+
+    // =========================================================================
+    // 8. INISIALISASI APLIKASI & EVENT LISTENERS
+    // =========================================================================
+    function updateVolumeUI() {
+      const muteBtn = document.getElementById('mute-toggle-btn');
+      const volSlider = document.getElementById('volume-slider');
+      const effectivelyMuted = state.isMuted || state.volume === 0;
+
+      if (muteBtn) {
+        muteBtn.textContent = effectivelyMuted ? '🔇' : state.volume < 50 ? '🔉' : '🔊';
+      }
+      if (volSlider && document.activeElement !== volSlider) {
+        volSlider.value = effectivelyMuted ? 0 : state.volume;
+      }
+      applyVolumeToActivePlayer();
+    }
+
+    async function setTargetDuration(durationSec) {
+      const parsed = Number(durationSec) || 30;
+      state.targetDuration = parsed;
+
+      document.querySelectorAll('.duration-btn').forEach((btn) => {
+        const btnDur = Number(btn.getAttribute('data-duration'));
+        if (btnDur === parsed) {
+          btn.className = 'duration-btn py-2.5 px-3 rounded-xl text-xs font-extrabold border border-purple-500 bg-purple-600/20 text-purple-200 shadow-sm transition cursor-pointer';
+        } else {
+          btn.className = 'duration-btn py-2.5 px-3 rounded-xl text-xs font-extrabold border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white hover:border-zinc-700 transition cursor-pointer';
+        }
+      });
+
+      if (state.clips.length > 0 && state.videoTitle) {
+        const newClips = await generateViralClipsWithAI(
+          state.videoTitle,
+          state.videoDuration,
+          state.targetDuration,
+          state.topicFocus,
+          state.fullVoiceTranscript
+        );
+        state.clips = newClips;
+        renderClipsList();
+        playClipSegment(0, true);
+        showToast(`Klip diperbarui ke durasi ${parsed} detik!`, 'success');
+      }
+    }
+
+    function init() {
+      if (window.location.protocol === 'file:') {
+        document.getElementById('file-protocol-banner')?.classList.remove('hidden');
+      }
+
+      loadYouTubeIframeAPI();
+
+      const savedKey = localStorage.getItem('klipkilat_gemini_key') || '';
+      const apiKeyInput = document.getElementById('gemini-api-key');
+      if (apiKeyInput && savedKey) apiKeyInput.value = savedKey;
+
+      document.getElementById('toggle-api-key-btn')?.addEventListener('click', () => {
+        document.getElementById('api-key-panel')?.classList.toggle('hidden');
+      });
+
+      document.getElementById('save-api-key-btn')?.addEventListener('click', () => {
+        const val = (document.getElementById('gemini-api-key')?.value || '').trim();
+        localStorage.setItem('klipkilat_gemini_key', val);
+        document.getElementById('api-key-panel')?.classList.add('hidden');
+        showToast(val ? 'Gemini API Key tersimpan!' : 'API Key dikosongkan (Smart AI aktif).', 'success');
+      });
+
+      document.getElementById('clear-api-key-btn')?.addEventListener('click', () => {
+        localStorage.removeItem('klipkilat_gemini_key');
+        if (apiKeyInput) apiKeyInput.value = '';
+        showToast('Gemini API Key dihapus.', 'info');
+      });
+
+      document.getElementById('clip-form')?.addEventListener('submit', handleGenerateSubmit);
+
+      document.getElementById('sample-link-btn')?.addEventListener('click', () => {
+        const sample = SAMPLE_VIDEOS[Math.floor(Math.random() * SAMPLE_VIDEOS.length)];
+        const urlInput = document.getElementById('youtube-url');
+        if (urlInput) {
+          urlInput.value = `https://www.youtube.com/watch?v=${sample.id}`;
+        }
+        handleGenerateSubmit();
+      });
+
+      document.querySelectorAll('.duration-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          setTargetDuration(btn.getAttribute('data-duration'));
+        });
+      });
+
+      document.getElementById('modal-upload-mp4-btn')?.addEventListener('click', () => {
+        ClipExporter.cancel();
+        document.getElementById('export-modal')?.classList.add('hidden');
+      });
+
+      document.getElementById('local-video-input')?.addEventListener('change', (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          handleLocalVideoUpload(file);
+        }
+        e.target.value = '';
+      });
+
+      const dropOverlay = document.getElementById('drop-zone-overlay');
+      window.addEventListener('dragover', (e) => {
+        if (e.dataTransfer?.types?.includes('Files')) {
+          e.preventDefault();
+          dropOverlay?.classList.remove('hidden');
+        }
+      });
+      window.addEventListener('dragleave', (e) => {
+        if (!e.relatedTarget) {
+          dropOverlay?.classList.add('hidden');
+        }
+      });
+      window.addEventListener('drop', (e) => {
+        if (e.dataTransfer?.files?.length) {
+          e.preventDefault();
+          dropOverlay?.classList.add('hidden');
+          handleLocalVideoUpload(e.dataTransfer.files[0]);
+        }
+      });
+
+      document.getElementById('ratio-9-16-btn')?.addEventListener('click', () => setAspectRatio('9:16'));
+      document.getElementById('ratio-fit-blur-btn')?.addEventListener('click', () => setAspectRatio('fit-blur'));
+      document.getElementById('ratio-16-9-btn')?.addEventListener('click', () => setAspectRatio('16:9'));
+
+      document.getElementById('portrait-bg-select')?.addEventListener('change', (e) => {
+        state.portraitBgStyle = e.target.value;
+        updatePortraitBlurLayer();
+      });
+
+      document.getElementById('toggle-captions-btn')?.addEventListener('click', (e) => {
+        state.showCaptions = !state.showCaptions;
+        const overlay = document.getElementById('caption-overlay');
+        if (overlay) {
+          overlay.classList.toggle('hidden', !state.showCaptions);
+        }
+        e.currentTarget.textContent = state.showCaptions ? '💬 Subtitle: ON' : '💬 Subtitle: OFF';
+      });
+
+      document.getElementById('caption-style-select')?.addEventListener('change', (e) => {
+        state.captionTheme = e.target.value;
+        applyCaptionThemeStyle();
+      });
+
+      document.getElementById('transcribe-voice-btn')?.addEventListener('click', () => {
+        const idx = Math.max(0, state.activeClipIndex);
+        VoiceTranscriber.transcribeSingleClip(idx);
+      });
+
+      document.getElementById('editor-transcribe-clip-btn')?.addEventListener('click', () => {
+        const idx = Math.max(0, state.activeClipIndex);
+        VoiceTranscriber.transcribeSingleClip(idx);
+      });
+
+      const captionsEditorList = document.getElementById('clip-captions-editor-list');
+      captionsEditorList?.addEventListener('click', (e) => {
+        const seekBtn = e.target.closest('.caption-seek-btn');
+        if (!seekBtn) return;
+        const sec = Number(seekBtn.getAttribute('data-seek-sec'));
+        if (!isFinite(sec)) return;
+        if (state.sourceType === 'local') {
+          const vid = document.getElementById('local-video-player');
+          if (vid) vid.currentTime = sec;
+        } else if (state.player && typeof state.player.seekTo === 'function') {
+          state.player.seekTo(sec, true);
+        }
+      });
+
+      captionsEditorList?.addEventListener('input', (e) => {
+        const inp = e.target.closest('.caption-line-input');
+        if (!inp) return;
+        const cIdx = Number(inp.getAttribute('data-cap-idx'));
+        const clip = SpeakerReframer.getActiveClip();
+        if (clip && clip.captions && clip.captions[cIdx]) {
+          clip.captions[cIdx].text = inp.value.toUpperCase();
+          const capEl = document.getElementById('caption-text');
+          if (capEl) capEl.textContent = clip.captions[cIdx].text;
+        }
+      });
+
+      document.getElementById('toggle-framing-editor-btn')?.addEventListener('click', () => {
+        document.getElementById('framing-editor-panel')?.classList.toggle('hidden');
+      });
+
+      document.getElementById('toggle-reframe-btn')?.addEventListener('click', (e) => {
+        const clip = SpeakerReframer.getActiveClip();
+        const framing = SpeakerReframer.ensureClipFraming(clip);
+        state.reframeEnabled = !state.reframeEnabled;
+        const btn = e.currentTarget;
+        const label = document.getElementById('toggle-reframe-label');
+
+        if (state.reframeEnabled) {
+          framing.mode = 'auto';
+          state.reframeMode = 'auto';
+          btn.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/35 hover:bg-emerald-500/25 transition cursor-pointer';
+          if (label) label.textContent = 'Auto-Reframe: ON';
+          SpeakerReframer.syncEditorControls(framing);
+          SpeakerReframer.applyToPreview(SpeakerReframer.ensurePreviewTracker().panX, true, framing.panY, framing.zoom);
+          showToast('AI Auto-Reframe mengikuti pembicara diaktifkan!', 'success');
+        } else {
+          framing.mode = 'manual';
+          state.reframeMode = 'manual';
+          btn.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-500/15 text-purple-300 border border-purple-500/35 hover:bg-purple-500/25 transition cursor-pointer';
+          if (label) label.textContent = 'Framing: Manual';
+          SpeakerReframer.syncEditorControls(framing);
+          SpeakerReframer.applyToPreview(framing.panX, true, framing.panY, framing.zoom);
+          showToast('Mode Framing Manual aktif — geser layar atau slider untuk atur posisi.', 'info');
+        }
+      });
+
+      document.getElementById('reframe-mode-select')?.addEventListener('change', (e) => {
+        const newMode = e.target.value;
+        state.reframeMode = newMode;
+        const clip = SpeakerReframer.getActiveClip();
+        const framing = SpeakerReframer.ensureClipFraming(clip);
+        framing.mode = newMode;
+
+        const btn = document.getElementById('toggle-reframe-btn');
+        const label = document.getElementById('toggle-reframe-label');
+
+        if (newMode === 'manual') {
+          state.reframeEnabled = false;
+          if (btn) btn.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-500/15 text-purple-300 border border-purple-500/35 hover:bg-purple-500/25 transition cursor-pointer';
+          if (label) label.textContent = 'Framing: Manual';
+          SpeakerReframer.syncEditorControls(framing);
+          SpeakerReframer.applyToPreview(framing.panX, true, framing.panY, framing.zoom);
+        } else if (newMode === 'center') {
+          state.reframeEnabled = false;
+          framing.panX = 0.5;
+          framing.panY = 0.5;
+          if (btn) btn.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-zinc-800 text-zinc-400 border border-zinc-700 hover:text-white transition cursor-pointer';
+          if (label) label.textContent = 'Framing: Statis';
+          SpeakerReframer.syncEditorControls(framing);
+          SpeakerReframer.applyToPreview(0.5, false, 0.5, framing.zoom);
+        } else {
+          state.reframeEnabled = true;
+          if (btn) btn.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/35 hover:bg-emerald-500/25 transition cursor-pointer';
+          if (label) label.textContent = 'Auto-Reframe: ON';
+          SpeakerReframer.resetTracker();
+        }
+      });
+
+      document.querySelectorAll('.frame-preset-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const preset = btn.getAttribute('data-frame-preset');
+          if (preset === 'left') {
+            SpeakerReframer.setManualFraming({ panX: 0.22, panY: 0.48, zoom: 1.12 });
+            showToast('Framing diarahkan ke Pembicara Kiri.', 'info');
+          } else if (preset === 'center') {
+            SpeakerReframer.setManualFraming({ panX: 0.5, panY: 0.5, zoom: 1.05 });
+            showToast('Framing dipusatkan ke Tengah.', 'info');
+          } else if (preset === 'right') {
+            SpeakerReframer.setManualFraming({ panX: 0.78, panY: 0.48, zoom: 1.12 });
+            showToast('Framing diarahkan ke Pembicara Kanan.', 'info');
+          } else if (preset === 'closeup') {
+            const cur = SpeakerReframer.ensureClipFraming(SpeakerReframer.getActiveClip());
+            const nextZoom = cur.zoom >= 1.45 ? 1.15 : 1.5;
+            SpeakerReframer.setManualFraming({ zoom: nextZoom });
+            showToast(`Zoom kamera diatur ke ${nextZoom.toFixed(2)}x.`, 'info');
+          } else if (preset === 'auto') {
+            const modeSelect = document.getElementById('reframe-mode-select');
+            if (modeSelect) {
+              modeSelect.value = 'auto';
+              modeSelect.dispatchEvent(new Event('change'));
+            }
+            showToast('Pelacakan otomatis AI Auto-Reframe diaktifkan.', 'success');
+          }
+        });
+      });
+
+      document.getElementById('framing-pan-x')?.addEventListener('input', (e) => {
+        SpeakerReframer.setManualFraming({ panX: Number(e.target.value) / 100 });
+      });
+      document.getElementById('framing-pan-y')?.addEventListener('input', (e) => {
+        SpeakerReframer.setManualFraming({ panY: Number(e.target.value) / 100 });
+      });
+      document.getElementById('framing-zoom')?.addEventListener('input', (e) => {
+        SpeakerReframer.setManualFraming({ zoom: Number(e.target.value) / 100 });
+      });
+
+      document.getElementById('reset-framing-btn')?.addEventListener('click', () => {
+        SpeakerReframer.setManualFraming({ panX: 0.5, panY: 0.5, zoom: 1.05 });
+        showToast('Posisi framing klip di-reset ke tengah.', 'info');
+      });
+
+      document.getElementById('apply-framing-all-btn')?.addEventListener('click', () => {
+        const currentClip = SpeakerReframer.getActiveClip();
+        if (!currentClip) return;
+        const src = SpeakerReframer.ensureClipFraming(currentClip);
+        state.clips.forEach((c) => {
+          c.framing = { ...src };
+        });
+        showToast(`Framing diterapkan ke seluruh ${state.clips.length} klip!`, 'success');
+      });
+
+      document.getElementById('quick-caption-input')?.addEventListener('input', (e) => {
+        const clip = SpeakerReframer.getActiveClip();
+        if (!clip || !Array.isArray(clip.captions) || clip.captions.length === 0) return;
+
+        let currentSec = clip.startTime;
+        if (state.sourceType === 'local') {
+          currentSec = document.getElementById('local-video-player')?.currentTime || clip.startTime;
+        } else if (state.player && typeof state.player.getCurrentTime === 'function') {
+          currentSec = state.player.getCurrentTime() || clip.startTime;
+        }
+
+        const activeCap =
+          clip.captions.find((c) => currentSec >= c.start && currentSec <= c.end) ||
+          clip.captions[0];
+        if (activeCap) {
+          activeCap.text = e.target.value.toUpperCase();
+          const capEl = document.getElementById('caption-text');
+          if (capEl) capEl.textContent = activeCap.text;
+        }
+      });
+
+      const aspectContainer = document.getElementById('aspect-container');
+      let dragStartX = 0;
+      let dragStartY = 0;
+      let initialPanX = 0.5;
+      let initialPanY = 0.5;
+      let wasDragged = false;
+
+      aspectContainer?.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 && e.pointerType === 'mouse') return;
+        SpeakerReframer.isDraggingFrame = true;
+        wasDragged = false;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        const cur = SpeakerReframer.ensureClipFraming(SpeakerReframer.getActiveClip());
+        initialPanX = cur.panX ?? 0.5;
+        initialPanY = cur.panY ?? 0.5;
+        aspectContainer.setPointerCapture?.(e.pointerId);
+      });
+
+      aspectContainer?.addEventListener('pointermove', (e) => {
+        if (!SpeakerReframer.isDraggingFrame) return;
+        const dx = e.clientX - dragStartX;
+        const dy = e.clientY - dragStartY;
+        if (!wasDragged && Math.hypot(dx, dy) > 5) {
+          wasDragged = true;
+          document.getElementById('framing-guide-grid')?.classList.remove('hidden');
+        }
+        if (wasDragged) {
+          const rect = aspectContainer.getBoundingClientRect();
+          const nextPanX = initialPanX - dx / Math.max(120, rect.width * 1.15);
+          const nextPanY = initialPanY - dy / Math.max(180, rect.height * 1.15);
+          SpeakerReframer.setManualFraming({ panX: nextPanX, panY: nextPanY }, false);
+        }
+      });
+
+      const endFrameDrag = (e) => {
+        if (!SpeakerReframer.isDraggingFrame) return;
+        SpeakerReframer.isDraggingFrame = false;
+        aspectContainer?.releasePointerCapture?.(e.pointerId);
+        document.getElementById('framing-guide-grid')?.classList.add('hidden');
+      };
+      aspectContainer?.addEventListener('pointerup', endFrameDrag);
+      aspectContainer?.addEventListener('pointercancel', endFrameDrag);
+
+      aspectContainer?.addEventListener(
+        'wheel',
+        (e) => {
+          e.preventDefault();
+          const cur = SpeakerReframer.ensureClipFraming(SpeakerReframer.getActiveClip());
+          const delta = e.deltaY < 0 ? 0.06 : -0.06;
+          SpeakerReframer.setManualFraming({ zoom: (cur.zoom || 1.05) + delta });
+        },
+        { passive: false }
+      );
+
+      const togglePlayPause = () => {
+        if (state.sourceType === 'local') {
+          const vid = document.getElementById('local-video-player');
+          const bgVid = document.getElementById('local-bg-blur-player');
+          if (!vid) return;
+          if (vid.paused) {
+            vid.play().then(() => updatePlayPauseIcon(true)).catch(() => {});
+            if (state.aspectRatio === 'fit-blur' && bgVid) bgVid.play().catch(() => {});
+          } else {
+            vid.pause();
+            if (bgVid) bgVid.pause();
+            updatePlayPauseIcon(false);
+          }
+        } else if (state.player && typeof state.player.getPlayerState === 'function' && window.YT) {
+          const st = state.player.getPlayerState();
+          if (st === YT.PlayerState.PLAYING) {
+            state.player.pauseVideo();
+            updatePlayPauseIcon(false);
+          } else {
+            state.player.playVideo();
+            updatePlayPauseIcon(true);
+          }
+        }
+      };
+
+      document.getElementById('play-pause-btn')?.addEventListener('click', togglePlayPause);
+      aspectContainer?.addEventListener('click', () => {
+        if (wasDragged) {
+          wasDragged = false;
+          return;
+        }
+        togglePlayPause();
+      });
+
+      document.getElementById('replay-clip-btn')?.addEventListener('click', () => {
+        if (state.activeClipIndex >= 0) {
+          playClipSegment(state.activeClipIndex, true);
+        }
+      });
+
+      document.getElementById('mute-toggle-btn')?.addEventListener('click', () => {
+        state.isMuted = !state.isMuted;
+        if (!state.isMuted && state.volume === 0) state.volume = 100;
+        updateVolumeUI();
+      });
+
+      document.getElementById('volume-slider')?.addEventListener('input', (e) => {
+        state.volume = Number(e.target.value);
+        state.isMuted = state.volume === 0;
+        updateVolumeUI();
+      });
+
+      document.getElementById('end-behavior-select')?.addEventListener('change', (e) => {
+        state.loopClip = e.target.value === 'loop';
+      });
+
+      document.getElementById('segment-progress-track')?.addEventListener('click', (e) => {
+        const clip = state.clips[state.activeClipIndex];
+        if (!clip) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+        const seekTarget = clip.startTime + ratio * clip.duration;
+
+        if (state.sourceType === 'local') {
+          const vid = document.getElementById('local-video-player');
+          const bgVid = document.getElementById('local-bg-blur-player');
+          if (vid) vid.currentTime = seekTarget;
+          if (bgVid) bgVid.currentTime = seekTarget;
+        } else if (state.player && typeof state.player.seekTo === 'function') {
+          state.player.seekTo(seekTarget, true);
+        }
+      });
+
+      document.getElementById('clips-list')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (btn) {
+          e.stopPropagation();
+          const idx = Number(btn.getAttribute('data-index'));
+          const action = btn.getAttribute('data-action');
+          if (action === 'play') playClipSegment(idx, true);
+          else if (action === 'download') openExportModal(idx);
+          else if (action === 'srt') downloadClipSrt(idx);
+          return;
+        }
+
+        const card = e.target.closest('.clip-card');
+        if (card) {
+          const idx = Number(card.getAttribute('data-clip-index'));
+          playClipSegment(idx, true);
+        }
+      });
+
+      document.getElementById('primary-download-clip-btn')?.addEventListener('click', () => {
+        openExportModal(Math.max(0, state.activeClipIndex));
+      });
+      document.getElementById('download-srt-btn')?.addEventListener('click', () => {
+        downloadClipSrt(Math.max(0, state.activeClipIndex));
+      });
+      document.getElementById('copy-ffmpeg-btn')?.addEventListener('click', () => {
+        copyFfmpegCommand(Math.max(0, state.activeClipIndex));
+      });
+      document.getElementById('batch-download-btn')?.addEventListener('click', startBatchLocalExport);
+
+      document.getElementById('live-hud-finish-btn')?.addEventListener('click', () => {
+        ClipExporter.finishEarly();
+      });
+      document.getElementById('live-hud-cancel-btn')?.addEventListener('click', () => {
+        ClipExporter.cancel();
+        document.getElementById('live-capture-hud')?.classList.add('hidden');
+        document.getElementById('overlay-top-badge')?.classList.remove('hidden');
+        showToast('Perekaman dibatalkan.', 'info');
+      });
+
+      document.getElementById('close-export-modal-btn')?.addEventListener('click', () => {
+        ClipExporter.cancel();
+        const resVid = document.getElementById('export-result-video');
+        if (resVid) resVid.pause();
+        document.getElementById('export-modal')?.classList.add('hidden');
+      });
+      document.getElementById('export-redownload-btn')?.addEventListener('click', () => {
+        if (ClipExporter.lastExportBlob && ClipExporter.lastExportFilename) {
+          ClipExporter.triggerDownload(ClipExporter.lastExportBlob, ClipExporter.lastExportFilename);
+          showToast('Mengunduh ulang file video...', 'success');
+        }
+      });
+      document.getElementById('restart-local-render-btn')?.addEventListener('click', () => {
+        ClipExporter.renderFromLocalFile(currentExportClipIndex);
+      });
+      document.getElementById('start-live-tab-capture-btn')?.addEventListener('click', () => {
+        ClipExporter.recordLiveTabSegment(currentExportClipIndex);
+      });
+      document.getElementById('start-instant-render-btn')?.addEventListener('click', () => {
+        ClipExporter.renderInstantStudioClip(currentExportClipIndex);
+      });
+      document.getElementById('download-script-btn')?.addEventListener('click', downloadTerminalScript);
+    }
+
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>
