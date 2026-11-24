@@ -175,7 +175,7 @@
 </head>
 <body class="min-h-screen flex flex-col selection:bg-purple-500/30 selection:text-purple-200">
 
-  <!-- Input File Video Lokal (Menggunakan opacity-0 & label agar 100% bisa diklik di semua browser/iframe) -->
+  <!-- Input File Video Lokal -->
   <input
     type="file"
     id="local-video-input"
@@ -190,11 +190,11 @@
     </div>
     <h3 class="text-2xl font-extrabold text-white mb-2">Lepaskan File Video MP4 Anda di Sini</h3>
     <p class="text-sm text-zinc-400 max-w-md">
-      Otomatis mendeteksi pembicara, memotong segmen viral 15/30/60 detik, dan menempelkan subtitle TikTok tanpa rekam manual.
+      Otomatis mendeteksi suara pembicara dengan Gemini Audio AI, memotong segmen viral 15/30/60 detik, dan menempelkan subtitle TikTok.
     </p>
   </div>
 
-  <!-- Local File Protocol Notice Banner (Muncul jika dibuka via file:// langsung tanpa server lokal) -->
+  <!-- Local File Protocol Notice Banner -->
   <div id="file-protocol-banner" class="hidden bg-amber-950/85 border-b border-amber-500/40 px-4 py-2 text-center text-xs text-amber-200">
     💡 <strong>Tips Menjalankan Lokal:</strong> Anda membuka file via <code class="px-1.5 py-0.5 rounded bg-black/40 font-mono">file://</code>. Fitur <strong>Upload MP4 Asli</strong> langsung aktif, namun untuk memutar embed <strong>YouTube</strong> jalankan server lokal (<code class="px-1.5 py-0.5 rounded bg-black/40 font-mono">npx serve</code> atau <code class="px-1.5 py-0.5 rounded bg-black/40 font-mono">python -m http.server</code>).
   </div>
@@ -227,7 +227,7 @@
           role="button"
           tabindex="0"
           class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-700/80 transition cursor-pointer select-none"
-          title="Unggah file MP4/MOV asli untuk pemotongan otomatis 100%"
+          title="Unggah file MP4/MOV asli untuk pemotongan & transkrip suara otomatis"
         >
           <span>📁</span>
           <span>Upload MP4 Asli</span>
@@ -237,10 +237,10 @@
           type="button"
           id="toggle-api-key-btn"
           class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 transition cursor-pointer"
-          title="Pengaturan Gemini API Key Opsional"
+          title="Pengaturan Gemini API Key"
         >
           <span>🔑</span>
-          <span class="hidden md:inline">API Key</span>
+          <span id="api-key-status-label" class="hidden md:inline">API Key</span>
         </button>
       </div>
     </div>
@@ -250,7 +250,7 @@
       <div class="max-w-3xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
         <div class="flex-1">
           <label for="gemini-api-key" class="block text-[11px] font-semibold text-zinc-400 mb-1">
-            Gemini API Key (Opsional — Tanpa API Key pun tetap berjalan otomatis dengan Smart AI Engine)
+            Gemini API Key (Disimpan lokal di browser Anda untuk Transkrip Suara Audio &amp; Analisis Klip AI)
           </label>
           <input
             type="password"
@@ -293,7 +293,7 @@
           Ubah Video Panjang Jadi Klip <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-indigo-400">15, 30 &amp; 60 Detik</span>
         </h1>
         <p class="text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto">
-          Otomatis mendeteksi momen terbaik, melacak posisi pembicara secara dinamis (Auto-Reframe 9:16), menambahkan subtitle TikTok, dan unduh 1-klik.
+          Otomatis mendeteksi momen terbaik, melacak posisi pembicara secara dinamis (Auto-Reframe 9:16), menambahkan subtitle sesuai suara, dan unduh 1-klik.
         </p>
       </div>
 
@@ -384,7 +384,7 @@
 
           <!-- Quick Local MP4 Banner inside Form -->
           <div class="pt-2 border-t border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-zinc-400">
-            <span>Punya file video asli (MP4/MOV/WebM)? Potong &amp; Auto-Reframe 100% otomatis tanpa rekam layar.</span>
+            <span>Untuk transkrip suara audio penuh 100% akurat &amp; tanpa rekam manual, unggah file video asli (MP4/MOV/WebM).</span>
             <label
               for="local-video-input"
               id="hero-upload-btn"
@@ -420,10 +420,10 @@
           </p>
         </div>
         <div class="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/80">
-          <div class="text-xl mb-2">💬</div>
-          <h3 class="text-xs font-extrabold text-white mb-1">Subtitle TikTok Otomatis</h3>
+          <div class="text-xl mb-2">🎙️</div>
+          <h3 class="text-xs font-extrabold text-white mb-1">Subtitle Sesuai Suara Asli</h3>
           <p class="text-[11px] text-zinc-400 leading-relaxed">
-            Caption dinamis tersinkronisasi per detik, dapat diedit langsung, dan tertanam permanen saat diunduh.
+            Menarik transkrip asli YouTube &amp; mendengarkan audio MP4 lewat Gemini Audio AI maupun Live Speech-to-Text.
           </p>
         </div>
         <div class="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/80">
@@ -499,7 +499,7 @@
                 type="button"
                 id="transcribe-voice-btn"
                 class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/35 hover:bg-emerald-500/25 transition cursor-pointer"
-                title="Buat subtitle otomatis mengikuti suara pembicara"
+                title="Sinkronkan subtitle mengikuti ucapan suara pembicara"
               >
                 🎙️ Sync Suara
               </button>
@@ -516,7 +516,7 @@
             </div>
           </div>
 
-          <!-- Bilah Gaya Background Potret (Muncul saat mode 9:16 Full+BG aktif) -->
+          <!-- Bilah Gaya Background Potret -->
           <div id="portrait-bg-bar" class="hidden flex flex-wrap items-center justify-between gap-2 mb-3 px-3 py-2 rounded-2xl bg-purple-950/30 border border-purple-500/35">
             <span class="text-xs font-bold text-purple-200 flex items-center gap-1.5">
               <span>🖼️</span>
@@ -562,7 +562,7 @@
                 type="button"
                 id="toggle-framing-editor-btn"
                 class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-600/25 text-purple-200 border border-purple-500/40 hover:bg-purple-600/35 transition cursor-pointer"
-                title="Buka / Tutup Editor Framing Manual"
+                title="Buka / Tutup Editor Framing Manual & Subtitle"
               >
                 <span>🎛️</span>
                 <span>Editor</span>
@@ -574,7 +574,7 @@
           <div id="framing-editor-panel" class="mb-4 p-3 rounded-2xl bg-zinc-950/95 border border-purple-500/30 space-y-3">
             <div class="flex items-center justify-between gap-2">
               <span class="text-[11px] font-extrabold uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
-                <span>🎛️ Editor Framing Klip</span>
+                <span>🎛️ Editor Framing &amp; Subtitle</span>
                 <span id="framing-mode-pill" class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 text-[10px] font-bold">Auto AI</span>
               </span>
               <button
@@ -592,7 +592,6 @@
                 type="button"
                 data-frame-preset="left"
                 class="frame-preset-btn py-1.5 px-1 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-bold text-zinc-200 transition cursor-pointer"
-                title="Fokus Pembicara Kiri"
               >
                 ⬅️ Kiri
               </button>
@@ -600,7 +599,6 @@
                 type="button"
                 data-frame-preset="center"
                 class="frame-preset-btn py-1.5 px-1 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-bold text-zinc-200 transition cursor-pointer"
-                title="Fokus Tengah"
               >
                 ⏺️ Tengah
               </button>
@@ -608,7 +606,6 @@
                 type="button"
                 data-frame-preset="right"
                 class="frame-preset-btn py-1.5 px-1 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-bold text-zinc-200 transition cursor-pointer"
-                title="Fokus Pembicara Kanan"
               >
                 ➡️ Kanan
               </button>
@@ -616,7 +613,6 @@
                 type="button"
                 data-frame-preset="closeup"
                 class="frame-preset-btn py-1.5 px-1 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-bold text-zinc-200 transition cursor-pointer"
-                title="Zoom Close-Up Wajah"
               >
                 🔍 Zoom+
               </button>
@@ -624,7 +620,6 @@
                 type="button"
                 data-frame-preset="auto"
                 class="frame-preset-btn py-1.5 px-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-[11px] font-bold text-emerald-300 transition cursor-pointer"
-                title="Kembalikan Pelacakan Otomatis AI"
               >
                 🤖 Auto
               </button>
@@ -699,7 +694,7 @@
                     type="button"
                     id="editor-transcribe-clip-btn"
                     class="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 text-[10px] font-extrabold transition cursor-pointer"
-                    title="Transkrip ulang suara pembicara pada klip ini"
+                    title="Dengarkan & transkrip ulang suara asli pada klip ini"
                   >
                     🎙️ Transkrip Suara Klip
                   </button>
@@ -923,7 +918,7 @@
     </section>
   </main>
 
-  <!-- Floating Live Capture HUD (for YouTube Tab Recording without obstructing video) -->
+  <!-- Floating Live Capture HUD -->
   <div id="live-capture-hud" class="hidden fixed bottom-4 left-4 z-50 bg-zinc-950/95 border border-purple-500/50 rounded-2xl p-3 shadow-2xl backdrop-blur-xl max-w-xs w-full">
     <div class="flex items-center justify-between gap-2 mb-2">
       <div class="flex items-center gap-2">
@@ -991,7 +986,7 @@
         </p>
       </div>
 
-      <!-- Rendered Video Verification Preview (Muncul setelah selesai render) -->
+      <!-- Rendered Video Verification Preview -->
       <div id="export-preview-box" class="hidden bg-zinc-950 border border-emerald-500/40 rounded-2xl p-3.5 space-y-2.5">
         <div class="flex items-center justify-between gap-2">
           <span class="text-xs font-extrabold text-emerald-300 flex items-center gap-1.5">
@@ -1139,7 +1134,7 @@
       targetDuration: 30,
       topicFocus: '',
       aspectRatio: '9:16', // '9:16' | 'fit-blur' | '16:9'
-      portraitBgStyle: 'blur-video', // 'blur-video' | 'blur-dark' | 'gradient-purple'
+      portraitBgStyle: 'blur-video',
       showCaptions: true,
       captionTheme: 'classic',
       reframeEnabled: true,
@@ -1155,7 +1150,7 @@
       localVideoFile: null,
       localVideoUrl: null,
       fullVoiceTranscript: [],
-      subtitleMode: 'ai', // 'ai' | 'voice' | 'live-stt'
+      subtitleMode: 'ai', // 'ai' | 'voice' | 'yt-caption' | 'live-stt'
       isListeningStt: false
     };
 
@@ -1207,7 +1202,7 @@
       setTimeout(() => {
         toast.classList.add('opacity-0', 'translate-y-2');
         setTimeout(() => toast.remove(), 300);
-      }, 3600);
+      }, 4000);
     }
 
     function extractYouTubeVideoId(input) {
@@ -1253,51 +1248,224 @@
             };
           }
         }
-      } catch (e) {
-        // Fallback diam-diam jika offline / CORS
-      }
+      } catch (e) {}
       return {
         title: sample ? sample.title : `Video YouTube (${videoId})`,
         duration: sample ? sample.duration : 360
       };
     }
 
-    async function fetchGeminiWithBackoff(payload, maxRetries = 3) {
-      const apiKey = (localStorage.getItem('klipkilat_gemini_key') || '').trim();
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+    // =========================================================================
+    // 2A. PENARIK TRANSKRIP / CAPTION ASLI VIDEO YOUTUBE OTOMATIS
+    // =========================================================================
+    const YouTubeTranscriptFetcher = {
+      decodeEntities(str) {
+        const txt = document.createElement('textarea');
+        txt.innerHTML = str;
+        return txt.value;
+      },
 
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      parseTimedTextXml(xmlText) {
+        const segments = [];
         try {
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+          const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+          const nodes = doc.querySelectorAll('text');
+          nodes.forEach((node) => {
+            const start = parseFloat(node.getAttribute('start') || '0');
+            const dur = parseFloat(node.getAttribute('dur') || '2.0');
+            const raw = this.decodeEntities(node.textContent || '')
+              .replace(/\s+/g, ' ')
+              .trim();
+            if (raw) {
+              segments.push({
+                start: Number(start.toFixed(2)),
+                end: Number((start + Math.max(0.6, dur)).toFixed(2)),
+                text: raw.toUpperCase()
+              });
+            }
           });
+        } catch (e) {}
+        return segments;
+      },
 
-          if (res.ok) {
-            return await res.json();
+      parseJson3Transcript(jsonText) {
+        const segments = [];
+        try {
+          const data = JSON.parse(jsonText);
+          if (!Array.isArray(data?.events)) return [];
+          for (const ev of data.events) {
+            if (!Array.isArray(ev.segs)) continue;
+            const start = (ev.tStartMs || 0) / 1000;
+            const dur = (ev.dDurationMs || 2000) / 1000;
+            const text = ev.segs
+              .map((s) => s.utf8 || '')
+              .join('')
+              .replace(/\s+/g, ' ')
+              .trim();
+            if (text) {
+              segments.push({
+                start: Number(start.toFixed(2)),
+                end: Number((start + Math.max(0.6, dur)).toFixed(2)),
+                text: text.toUpperCase()
+              });
+            }
           }
+        } catch (e) {}
+        return segments;
+      },
 
-          if ((res.status === 429 || res.status === 503) && attempt < maxRetries) {
-            const delayMs = Math.pow(2, attempt) * 1000;
-            await new Promise((r) => setTimeout(r, delayMs));
-            continue;
-          }
-          return null;
-        } catch (err) {
-          if (attempt < maxRetries) {
-            const delayMs = Math.pow(2, attempt) * 1000;
-            await new Promise((r) => setTimeout(r, delayMs));
-            continue;
-          }
-          return null;
+      async fetchViaProxy(targetUrl) {
+        const proxies = [
+          (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+          (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`
+        ];
+        for (const makeUrl of proxies) {
+          try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 5500);
+            const res = await fetch(makeUrl(targetUrl), { signal: controller.signal });
+            clearTimeout(timer);
+            if (res.ok) {
+              const text = await res.text();
+              if (text && text.length > 60) return text;
+            }
+          } catch (e) {}
         }
+        return null;
+      },
+
+      async fetchTranscript(videoId) {
+        if (!videoId) return [];
+        try {
+          const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+          const html = await this.fetchViaProxy(watchUrl);
+          if (html) {
+            const match = html.match(/"captionTracks":(\[.*?\])/);
+            if (match && match[1]) {
+              const tracks = JSON.parse(match[1]);
+              if (Array.isArray(tracks) && tracks.length > 0) {
+                const chosen =
+                  tracks.find((t) => t.languageCode === 'id') ||
+                  tracks.find((t) => String(t.languageCode || '').startsWith('id')) ||
+                  tracks.find((t) => String(t.languageCode || '').startsWith('en')) ||
+                  tracks[0];
+                if (chosen && chosen.baseUrl) {
+                  const captionXml = await this.fetchViaProxy(chosen.baseUrl);
+                  if (captionXml) {
+                    const parsedXml = this.parseTimedTextXml(captionXml);
+                    if (parsedXml.length > 0) return parsedXml;
+                  }
+                }
+              }
+            }
+          }
+
+          // Cadangan langsung ke endpoint timedtext YouTube
+          const langs = ['id', 'en'];
+          for (const lang of langs) {
+            const ttUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${lang}&fmt=json3`;
+            const jsonStr = await this.fetchViaProxy(ttUrl);
+            if (jsonStr && jsonStr.trim().startsWith('{')) {
+              const parsedJson = this.parseJson3Transcript(jsonStr);
+              if (parsedJson.length > 0) return parsedJson;
+            }
+          }
+        } catch (e) {}
+        return [];
+      }
+    };
+
+    // =========================================================================
+    // 2B. KLIEN GEMINI API MULTIMODAL (AUDIO + TEKS) DENGAN MULTI-MODEL FALLBACK
+    // =========================================================================
+    function extractJsonArrayFromText(rawText) {
+      if (!rawText) return null;
+      let cleaned = String(rawText).trim();
+      cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+      try {
+        const direct = JSON.parse(cleaned);
+        if (Array.isArray(direct)) return direct;
+      } catch (e) {}
+
+      const firstBracket = cleaned.indexOf('[');
+      const lastBracket = cleaned.lastIndexOf(']');
+      if (firstBracket !== -1 && lastBracket > firstBracket) {
+        try {
+          const sliced = JSON.parse(cleaned.slice(firstBracket, lastBracket + 1));
+          if (Array.isArray(sliced)) return sliced;
+        } catch (e) {}
       }
       return null;
     }
 
+    async function callGeminiMultimodal(parts, useStrictSchema = false) {
+      const apiKey = (localStorage.getItem('klipkilat_gemini_key') || '').trim();
+      if (!apiKey) {
+        return { error: 'NO_API_KEY', data: null };
+      }
+
+      const models = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+      let lastErrorMsg = '';
+
+      for (const model of models) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const bodyObj = {
+          contents: [{ role: 'user', parts }],
+          generationConfig: {
+            temperature: 0.2,
+            responseMimeType: 'application/json'
+          }
+        };
+        if (useStrictSchema) {
+          bodyObj.generationConfig.responseSchema = {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                start: { type: 'NUMBER' },
+                end: { type: 'NUMBER' },
+                text: { type: 'STRING' }
+              }
+            }
+          };
+        }
+
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(bodyObj)
+            });
+
+            if (res.ok) {
+              const json = await res.json();
+              const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              if (text) return { error: null, text };
+            } else {
+              const errJson = await res.json().catch(() => ({}));
+              lastErrorMsg = errJson?.error?.message || `HTTP ${res.status}`;
+              if (res.status === 400 && useStrictSchema) {
+                // Coba ulang tanpa responseSchema jika ditolak kombinasi audio
+                delete bodyObj.generationConfig.responseSchema;
+                continue;
+              }
+              if (res.status === 429 || res.status === 503) {
+                await new Promise((r) => setTimeout(r, 1200));
+                continue;
+              }
+              break;
+            }
+          } catch (err) {
+            lastErrorMsg = err.message || 'Network error';
+          }
+        }
+      }
+      return { error: lastErrorMsg || 'GEMINI_FAILED', text: null };
+    }
+
     // =========================================================================
-    // 2B. MESIN TRANSKRIP SUARA OTOMATIS (AUDIO AI & LIVE SPEECH-TO-TEXT)
+    // 2C. MESIN TRANSKRIP SUARA OTOMATIS (GEMINI AUDIO + LIVE SPEECH-TO-TEXT)
     // =========================================================================
     const VoiceTranscriber = {
       recognition: null,
@@ -1330,8 +1498,8 @@
         writeStr(8, 'WAVE');
         writeStr(12, 'fmt ');
         view.setUint32(16, 16, true);
-        view.setUint16(20, 1, true); // PCM
-        view.setUint16(22, 1, true); // Mono
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
         view.setUint32(24, sampleRate, true);
         view.setUint32(28, sampleRate * 2, true);
         view.setUint16(32, 2, true);
@@ -1347,10 +1515,10 @@
         return buffer;
       },
 
-      async extractWavBase64FromFile(file, startSec = 0, maxDurationSec = 180) {
+      async extractWavBase64FromFile(file, startSec = 0, maxDurationSec = 150) {
         if (!file) return null;
         try {
-          const maxBytes = 45 * 1024 * 1024;
+          const maxBytes = 65 * 1024 * 1024;
           const slicedBlob = file.size > maxBytes ? file.slice(0, maxBytes) : file;
           const arrayBuf = await slicedBlob.arrayBuffer();
 
@@ -1377,7 +1545,7 @@
             }
           }
 
-          const targetRate = 8000;
+          const targetRate = 12000;
           const ratio = origRate / targetRate;
           const outLen = Math.max(1, Math.floor(frameLen / ratio));
           const resampled = new Float32Array(outLen);
@@ -1389,77 +1557,81 @@
           const wavBuf = this.encodeMonoWav(resampled, targetRate);
           return {
             base64: this.arrayBufferToBase64(wavBuf),
+            mimeType: 'audio/wav',
             actualStart: safeStart,
             actualDuration: clipDur
           };
         } catch (err) {
+          // Fallback: Jika file <= 16MB & decodeAudioData gagal, kirim langsung sebagai inlineData
+          if (file.size <= 16 * 1024 * 1024) {
+            try {
+              const buf = await file.arrayBuffer();
+              return {
+                base64: this.arrayBufferToBase64(buf),
+                mimeType: file.type || 'video/mp4',
+                actualStart: 0,
+                actualDuration: Math.max(10, state.videoDuration || 60)
+              };
+            } catch (e2) {}
+          }
           return null;
         }
       },
 
-      async transcribeAudioSegment(file, startSec = 0, durationSec = 180) {
+      async transcribeAudioSegment(file, startSec = 0, durationSec = 150) {
+        const apiKey = (localStorage.getItem('klipkilat_gemini_key') || '').trim();
+        if (!apiKey) {
+          return { segments: [], error: 'NO_API_KEY' };
+        }
+
         const extracted = await this.extractWavBase64FromFile(file, startSec, durationSec);
-        if (!extracted || !extracted.base64) return [];
+        if (!extracted || !extracted.base64) {
+          return { segments: [], error: 'DECODE_FAILED' };
+        }
 
         const langVal = document.getElementById('stt-lang-select')?.value || 'id-ID';
         const langName = langVal === 'en-US' ? 'Inggris' : 'Indonesia';
 
-        const prompt = `Dengarkan audio ini dengan saksama dan transkripsikan SEMUA ucapan pembicara secara verbatim (kata demi kata sesuai suara asli, dominan bahasa ${langName}).
-Pecah transkrip menjadi potongan subtitle pendek gaya TikTok/Shorts (maksimal 3 sampai 6 kata per baris) dengan timestamp start dan end dalam detik relatif terhadap awal audio ini (mulai dari 0.0 hingga ${extracted.actualDuration.toFixed(1)}).
-Jangan mengarang kalimat yang tidak diucapkan. Jika ada jeda musik/diam, lewati ke detik berikutnya saat pembicara bicara lagi.`;
+        const prompt = `Tugasmu adalah Speech-to-Text (transkripsi audio verbatim).
+Dengarkan rekaman suara ini dengan sangat teliti dan tuliskan SEMUA ucapan pembicara persis kata demi kata sesuai yang terdengar (dominan bahasa ${langName}).
+Bagi transkrip menjadi potongan subtitle pendek gaya TikTok/Shorts (maksimal 3 sampai 7 kata per potongan) dengan timestamp "start" dan "end" dalam detik (angka desimal, mulai dari 0.0 hingga ${extracted.actualDuration.toFixed(1)}).
+PENTING:
+- Kembalikan HANYA JSON Array valid dengan format: [{"start": 0.0, "end": 2.4, "text": "UCAPAN ASLI DI SINI"}]
+- Jangan mengarang atau menambahkan teks yang tidak diucapkan di audio.`;
 
-        const payload = {
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                { text: prompt },
-                {
-                  inlineData: {
-                    mimeType: 'audio/wav',
-                    data: extracted.base64
-                  }
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: 'ARRAY',
-              items: {
-                type: 'OBJECT',
-                properties: {
-                  start: { type: 'NUMBER' },
-                  end: { type: 'NUMBER' },
-                  text: { type: 'STRING' }
-                }
-              }
+        const parts = [
+          { text: prompt },
+          {
+            inlineData: {
+              mimeType: extracted.mimeType,
+              data: extracted.base64
             }
           }
-        };
+        ];
 
-        const data = await fetchGeminiWithBackoff(payload, 2);
-        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!rawText) return [];
-
-        try {
-          const parsed = JSON.parse(rawText);
-          if (!Array.isArray(parsed)) return [];
-          return parsed
-            .filter((item) => item && String(item.text || '').trim().length > 0)
-            .map((item) => {
-              const s = Math.max(0, Number(item.start) || 0) + extracted.actualStart;
-              const e = Math.max(s + 0.4, Number(item.end) || s + 1.5) + extracted.actualStart;
-              return {
-                start: Number(s.toFixed(2)),
-                end: Number(e.toFixed(2)),
-                text: String(item.text).trim().toUpperCase()
-              };
-            });
-        } catch (e) {
-          return [];
+        const result = await callGeminiMultimodal(parts, false);
+        if (result.error || !result.text) {
+          return { segments: [], error: result.error || 'GEMINI_EMPTY' };
         }
+
+        const parsed = extractJsonArrayFromText(result.text);
+        if (!Array.isArray(parsed)) {
+          return { segments: [], error: 'PARSE_FAILED' };
+        }
+
+        const segments = parsed
+          .filter((item) => item && String(item.text || '').trim().length > 0)
+          .map((item) => {
+            const s = Math.max(0, Number(item.start) || 0) + extracted.actualStart;
+            const e = Math.max(s + 0.45, Number(item.end) || s + 1.8) + extracted.actualStart;
+            return {
+              start: Number(s.toFixed(2)),
+              end: Number(e.toFixed(2)),
+              text: String(item.text).trim().toUpperCase()
+            };
+          });
+
+        return { segments, error: null };
       },
 
       mapTranscriptToClip(clip, transcriptSegments) {
@@ -1487,13 +1659,20 @@ Jangan mengarang kalimat yang tidak diucapkan. Jika ada jeda musik/diam, lewati 
         if (!clip) return;
 
         if (state.sourceType === 'local' && state.localVideoFile) {
+          const apiKey = (localStorage.getItem('klipkilat_gemini_key') || '').trim();
+          if (!apiKey) {
+            showToast('API Key belum diisi — menjalankan Live Speech-to-Text saat video diputar...', 'info');
+            this.toggleLiveSpeechRecognition();
+            return;
+          }
+
           const btn = document.getElementById('editor-transcribe-clip-btn');
           const topBtn = document.getElementById('transcribe-voice-btn');
           if (btn) btn.textContent = '⏳ Mendengarkan suara...';
           if (topBtn) topBtn.textContent = '⏳ Syncing...';
 
-          showToast(`Mentranskrip suara asli Klip #${clipIndex + 1}...`, 'info');
-          const segs = await this.transcribeAudioSegment(
+          showToast(`Gemini sedang mendengarkan suara asli Klip #${clipIndex + 1}...`, 'info');
+          const { segments, error } = await this.transcribeAudioSegment(
             state.localVideoFile,
             clip.startTime,
             clip.duration + 1
@@ -1502,8 +1681,8 @@ Jangan mengarang kalimat yang tidak diucapkan. Jika ada jeda musik/diam, lewati 
           if (btn) btn.textContent = '🎙️ Transkrip Suara Klip';
           if (topBtn) topBtn.textContent = '🎙️ Sync Suara';
 
-          if (segs.length > 0) {
-            clip.captions = segs.map((s) => ({
+          if (segments.length > 0) {
+            clip.captions = segments.map((s) => ({
               start: Number(Math.max(clip.startTime, s.start).toFixed(2)),
               end: Number(Math.min(clip.endTime, s.end).toFixed(2)),
               text: s.text
@@ -1517,9 +1696,26 @@ Jangan mengarang kalimat yang tidak diucapkan. Jika ada jeda musik/diam, lewati 
             if (capEl && clip.captions[0]) capEl.textContent = clip.captions[0].text;
             showToast(`Berhasil! ${clip.captions.length} baris subtitle disinkronkan dengan suara asli.`, 'success');
           } else {
-            showToast('Tidak terdeteksi ucapan jelas pada segmen ini atau koneksi sibuk.', 'error');
+            showToast(`Transkrip Gemini gagal (${error || 'tidak ada suara'}). Beralih ke Live Speech-to-Text...`, 'error');
+            this.toggleLiveSpeechRecognition();
           }
         } else {
+          // Untuk video YouTube: coba tarik caption asli dulu jika belum ada, lalu jalankan Live STT
+          if (state.videoId && state.fullVoiceTranscript.length === 0) {
+            showToast('Mencari transkrip asli video YouTube...', 'info');
+            const ytCaps = await YouTubeTranscriptFetcher.fetchTranscript(state.videoId);
+            if (ytCaps.length > 0) {
+              state.fullVoiceTranscript = ytCaps;
+              if (this.mapTranscriptToClip(clip, ytCaps)) {
+                state.subtitleMode = 'yt-caption';
+                updateSubtitleSourceBadge();
+                renderClipsList();
+                renderClipCaptionsEditor(clip);
+                showToast(`Transkrip asli YouTube berhasil disinkronkan (${clip.captions.length} baris)!`, 'success');
+                return;
+              }
+            }
+          }
           this.toggleLiveSpeechRecognition();
         }
       },
@@ -1578,7 +1774,7 @@ Jangan mengarang kalimat yang tidak diucapkan. Jika ada jeda musik/diam, lewati 
           if (state.volume === 0) state.volume = 100;
           updateVolumeUI();
           playClipSegment(state.activeClipIndex, true);
-          showToast('Mendengarkan suara video... Subtitle otomatis tercatat saat video diputar!', 'success');
+          showToast('Mendengarkan suara dari speaker... Subtitle otomatis tercatat saat video diputar!', 'success');
         };
 
         rec.onresult = (event) => {
@@ -1652,12 +1848,14 @@ Jangan mengarang kalimat yang tidak diucapkan. Jika ada jeda musik/diam, lewati 
       if (state.isListeningStt) {
         pill.textContent = '🔴 Live Speech-to-Text Aktif';
         pill.className = 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-500/20 border border-red-500/40 text-red-300';
-      } else if (activeClip?.isVoiceSynced || state.subtitleMode === 'voice') {
-        pill.textContent = '🎙️ Subtitle Sesuai Suara Asli';
+      } else if (activeClip?.isVoiceSynced || state.subtitleMode === 'voice' || state.subtitleMode === 'yt-caption') {
+        pill.textContent = state.subtitleMode === 'yt-caption'
+          ? '🎙️ Transkrip Asli YouTube'
+          : '🎙️ Gemini Audio AI (Suara Asli)';
         pill.className = 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/35 text-emerald-300';
       } else {
-        pill.textContent = '💬 Subtitle: Smart AI';
-        pill.className = 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400';
+        pill.textContent = '💬 Subtitle: Estimasi Topik';
+        pill.className = 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/35 text-amber-300';
       }
     }
 
@@ -1900,9 +2098,7 @@ Jangan mengarang kalimat yang tidak diucapkan. Jika ada jeda musik/diam, lewati 
           const force = (targetX - tracker.panX) * stiffness;
           tracker.velX = (tracker.velX + force * dt) * Math.max(0, 1 - damping * dt);
           tracker.panX = Math.min(0.86, Math.max(0.14, tracker.panX + tracker.velX * dt));
-        } catch (e) {
-          // Abaikan jika frame belum siap
-        }
+        } catch (e) {}
         return tracker.panX;
       },
 
@@ -2123,7 +2319,7 @@ Jangan mengarang kalimat yang tidak diucapkan. Jika ada jeda musik/diam, lewati 
       const statusSub = document.getElementById('status-sub');
       if (statusBanner) statusBanner.classList.remove('hidden');
       if (statusMsg) statusMsg.textContent = `Memuat file "${file.name}"...`;
-      if (statusSub) statusSub.textContent = 'Mendeteksi durasi asli & menyiapkan pemotong otomatis';
+      if (statusSub) statusSub.textContent = 'Mendeteksi durasi asli & mengekstrak audio pembicara';
 
       if (state.localVideoUrl) {
         URL.revokeObjectURL(state.localVideoUrl);
@@ -2164,14 +2360,15 @@ Jangan mengarang kalimat yang tidak diucapkan. Jika ada jeda musik/diam, lewati 
       const realDur = Number(localVid.duration);
       state.videoDuration = isFinite(realDur) && realDur > 5 ? Math.floor(realDur) : 120;
 
-      if (statusMsg) statusMsg.textContent = 'Mentranskrip suara pembicara & mencari momen viral...';
-      if (statusSub) statusSub.textContent = 'Sinkronisasi subtitle otomatis sesuai ucapan asli di video';
+      if (statusMsg) statusMsg.textContent = 'Gemini mendengarkan suara asli pembicara...';
+      if (statusSub) statusSub.textContent = 'Mentranskrip ucapan asli kata demi kata ke subtitle bertimestamp';
 
-      state.fullVoiceTranscript = await VoiceTranscriber.transcribeAudioSegment(
+      const txResult = await VoiceTranscriber.transcribeAudioSegment(
         file,
         0,
-        Math.min(180, state.videoDuration)
+        Math.min(150, state.videoDuration)
       );
+      state.fullVoiceTranscript = txResult.segments || [];
       state.subtitleMode = state.fullVoiceTranscript.length > 0 ? 'voice' : 'ai';
 
       state.clips = await generateViralClipsWithAI(
@@ -2201,12 +2398,14 @@ Jangan mengarang kalimat yang tidak diucapkan. Jika ada jeda musik/diam, lewati 
       renderClipsList();
       setAspectRatio(state.aspectRatio);
       playClipSegment(0, true);
-      showToast(
-        state.fullVoiceTranscript.length > 0
-          ? `Video siap! ${state.clips.length} klip & subtitle sesuai suara berhasil dibuat.`
-          : `Video siap! ${state.clips.length} klip otomatis berhasil dibuat.`,
-        'success'
-      );
+
+      if (state.fullVoiceTranscript.length > 0) {
+        showToast(`Sukses! ${state.clips.length} klip & ${state.fullVoiceTranscript.length} baris subtitle sesuai suara asli dibuat.`, 'success');
+      } else if (txResult.error === 'NO_API_KEY') {
+        showToast('API Key belum diisi — klik "🎙️ Sync Suara" saat video diputar untuk menangkap ucapan otomatis.', 'info');
+      } else {
+        showToast(`Transkrip otomatis terkendala (${txResult.error || 'audio sunyi'}). Klik "🎙️ Sync Suara" untuk rekam langsung.`, 'error');
+      }
     }
 
     function applyVolumeToActivePlayer() {
@@ -2368,7 +2567,7 @@ Jangan mengarang kalimat yang tidak diucapkan. Jika ada jeda musik/diam, lewati 
     }
 
     // =========================================================================
-    // 5. GENERATOR SEGMEN KLIP VIRAL (GEMINI API + SMART FALLBACK)
+    // 5. GENERATOR SEGMEN KLIP VIRAL (GEMINI API + TRANSKRIP ASLI + FALLBACK)
     // =========================================================================
     function buildSmartFallbackClips(title, totalDuration, targetDuration, topicFocus) {
       const safeTotal = Math.max(20, Math.floor(totalDuration || 240));
@@ -2466,9 +2665,9 @@ Jangan mengarang kalimat yang tidak diucapkan. Jika ada jeda musik/diam, lewati 
       try {
         const hasTranscript = Array.isArray(voiceTranscript) && voiceTranscript.length > 0;
         const transcriptSummary = hasTranscript
-          ? `\nTranskrip suara asli video (timestamp dalam detik):\n` +
+          ? `\nTranskrip ucapan asli video (timestamp dalam detik):\n` +
             voiceTranscript
-              .slice(0, 90)
+              .slice(0, 110)
               .map((s) => `[${s.start.toFixed(1)}s - ${s.end.toFixed(1)}s] ${s.text}`)
               .join('\n')
           : '';
@@ -2479,43 +2678,13 @@ Durasi total video: ${safeTotal} detik.
 Target durasi tiap klip: ${clipLen} detik.
 ${topicFocus ? `Fokus topik khusus: "${topicFocus}"` : ''}${transcriptSummary}
 
-Buatkan 4 segmen klip terbaik dengan startTime antara 0 hingga ${Math.max(0, safeTotal - clipLen)} detik, durasi masing-masing tepat ${clipLen} detik, judul hook berbahasa Indonesia yang menarik, alasan viral, skor (85-99), dan 4 sampai 6 baris subtitle pendek huruf kapital berbahasa Indonesia yang waktunya berada di dalam rentang [startTime, startTime + ${clipLen}]. ${hasTranscript ? 'Gunakan kalimat persis dari transkrip suara asli di atas pada rentang waktu yang dipilih!' : 'Buat kalimat subtitle bergaya ucapan pembicara yang relevan dengan topik video.'}`;
+Pilih 4 segmen klip terbaik dengan "startTime" antara 0 hingga ${Math.max(0, safeTotal - clipLen)} detik, durasi masing-masing tepat ${clipLen} detik, judul hook berbahasa Indonesia yang menarik, alasan viral, skor (85-99), dan daftar "captions" (potongan subtitle pendek huruf kapital yang waktunya berada di dalam rentang [startTime, startTime + ${clipLen}]).
+${hasTranscript ? 'WAJIB: Salin persis kalimat dari transkrip ucapan asli di atas sesuai detik kemunculannya!' : 'Buat kalimat subtitle bergaya ucapan pembicara yang relevan.'}
+Kembalikan HANYA JSON Array valid dengan format:
+[{"title":"...","hookReason":"...","score":95,"startTime":10,"captions":[{"start":10.0,"end":13.0,"text":"..."}]}]`;
 
-        const payload = {
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: 'ARRAY',
-              items: {
-                type: 'OBJECT',
-                properties: {
-                  title: { type: 'STRING' },
-                  hookReason: { type: 'STRING' },
-                  score: { type: 'NUMBER' },
-                  startTime: { type: 'NUMBER' },
-                  captions: {
-                    type: 'ARRAY',
-                    items: {
-                      type: 'OBJECT',
-                      properties: {
-                        start: { type: 'NUMBER' },
-                        end: { type: 'NUMBER' },
-                        text: { type: 'STRING' }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        };
-
-        const data = await fetchGeminiWithBackoff(payload, 2);
-        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!rawText) throw new Error('Empty AI response');
-
-        const parsed = JSON.parse(rawText);
+        const result = await callGeminiMultimodal([{ text: prompt }], false);
+        const parsed = extractJsonArrayFromText(result.text);
         if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('Invalid clips');
 
         return parsed.slice(0, 5).map((item, idx) => {
@@ -2609,6 +2778,11 @@ Buatkan 4 segmen klip terbaik dengan startTime antara 0 hingga ${Math.max(0, saf
                   <span class="px-2 py-0.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-950 text-zinc-300 border border-zinc-800">
                     ${formatTime(clip.startTime)} - ${formatTime(clip.endTime)} (${clip.duration}d)
                   </span>
+                  ${
+                    clip.isVoiceSynced
+                      ? `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">🎙️ Suara Asli</span>`
+                      : ''
+                  }
                 </div>
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0">
                   🔥 Skor ${clip.score}
@@ -2837,25 +3011,40 @@ Buatkan 4 segmen klip terbaik dengan startTime antara 0 hingga ${Math.max(0, saf
 
       if (genBtn) genBtn.disabled = true;
       if (statusBanner) statusBanner.classList.remove('hidden');
-      if (statusMsg) statusMsg.textContent = 'Mengambil informasi video YouTube...';
-      if (statusSub) statusSub.textContent = 'Mendeteksi judul, durasi asli & momen terbaik';
+      if (statusMsg) statusMsg.textContent = 'Mengambil informasi & transkrip asli video YouTube...';
+      if (statusSub) statusSub.textContent = 'Menarik caption asli video agar subtitle sesuai ucapan pembicara';
 
       state.sourceType = 'youtube';
       state.videoId = videoId;
       state.videoUrl = rawUrl;
       state.topicFocus = (document.getElementById('topic-focus')?.value || '').trim();
 
-      const meta = await fetchYouTubeMetadata(videoId);
+      const [meta, ytTranscript] = await Promise.all([
+        fetchYouTubeMetadata(videoId),
+        YouTubeTranscriptFetcher.fetchTranscript(videoId)
+      ]);
+
       state.videoTitle = meta.title;
-      state.videoDuration = meta.duration;
+      state.fullVoiceTranscript = ytTranscript;
+      state.subtitleMode = ytTranscript.length > 0 ? 'yt-caption' : 'ai';
+
+      const lastCapEnd = ytTranscript.length > 0 ? Math.ceil(ytTranscript[ytTranscript.length - 1].end) : 0;
+      state.videoDuration = Math.max(meta.duration, lastCapEnd);
 
       if (statusMsg) statusMsg.textContent = `Membuat klip ${state.targetDuration} detik dengan AI...`;
+      if (statusSub) {
+        statusSub.textContent =
+          ytTranscript.length > 0
+            ? `Ditemukan ${ytTranscript.length} baris transkrip asli YouTube!`
+            : 'Menyusun segmen klip terbaik (klik "🎙️ Sync Suara" saat diputar untuk transkrip live)';
+      }
 
       state.clips = await generateViralClipsWithAI(
         state.videoTitle,
         state.videoDuration,
         state.targetDuration,
-        state.topicFocus
+        state.topicFocus,
+        state.fullVoiceTranscript
       );
 
       if (genBtn) genBtn.disabled = false;
@@ -2879,7 +3068,12 @@ Buatkan 4 segmen klip terbaik dengan startTime antara 0 hingga ${Math.max(0, saf
       renderClipsList();
       setAspectRatio(state.aspectRatio);
       playClipSegment(0, true);
-      showToast(`Berhasil membuat ${state.clips.length} klip viral otomatis!`, 'success');
+
+      if (ytTranscript.length > 0) {
+        showToast(`Berhasil! ${state.clips.length} klip dibuat dengan transkrip asli video YouTube.`, 'success');
+      } else {
+        showToast('Video YouTube ini tidak memiliki CC publik — klik "🎙️ Sync Suara" saat diputar atau Upload MP4 Asli.', 'info');
+      }
     }
 
     function openExportModal(clipIndex) {
@@ -3884,6 +4078,20 @@ Buatkan 4 segmen klip terbaik dengan startTime antara 0 hingga ${Math.max(0, saf
     // =========================================================================
     // 8. INISIALISASI APLIKASI & EVENT LISTENERS
     // =========================================================================
+    function refreshApiKeyBadge() {
+      const savedKey = (localStorage.getItem('klipkilat_gemini_key') || '').trim();
+      const label = document.getElementById('api-key-status-label');
+      const btn = document.getElementById('toggle-api-key-btn');
+      if (label) {
+        label.textContent = savedKey ? 'API Key Aktif' : 'API Key';
+      }
+      if (btn) {
+        btn.className = savedKey
+          ? 'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/35 transition cursor-pointer'
+          : 'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 transition cursor-pointer';
+      }
+    }
+
     function updateVolumeUI() {
       const muteBtn = document.getElementById('mute-toggle-btn');
       const volSlider = document.getElementById('volume-slider');
@@ -3936,6 +4144,7 @@ Buatkan 4 segmen klip terbaik dengan startTime antara 0 hingga ${Math.max(0, saf
       const savedKey = localStorage.getItem('klipkilat_gemini_key') || '';
       const apiKeyInput = document.getElementById('gemini-api-key');
       if (apiKeyInput && savedKey) apiKeyInput.value = savedKey;
+      refreshApiKeyBadge();
 
       document.getElementById('toggle-api-key-btn')?.addEventListener('click', () => {
         document.getElementById('api-key-panel')?.classList.toggle('hidden');
@@ -3944,13 +4153,15 @@ Buatkan 4 segmen klip terbaik dengan startTime antara 0 hingga ${Math.max(0, saf
       document.getElementById('save-api-key-btn')?.addEventListener('click', () => {
         const val = (document.getElementById('gemini-api-key')?.value || '').trim();
         localStorage.setItem('klipkilat_gemini_key', val);
+        refreshApiKeyBadge();
         document.getElementById('api-key-panel')?.classList.add('hidden');
-        showToast(val ? 'Gemini API Key tersimpan!' : 'API Key dikosongkan (Smart AI aktif).', 'success');
+        showToast(val ? 'Gemini API Key tersimpan! Siap mentranskrip suara asli.' : 'API Key dikosongkan.', 'success');
       });
 
       document.getElementById('clear-api-key-btn')?.addEventListener('click', () => {
         localStorage.removeItem('klipkilat_gemini_key');
         if (apiKeyInput) apiKeyInput.value = '';
+        refreshApiKeyBadge();
         showToast('Gemini API Key dihapus.', 'info');
       });
 
